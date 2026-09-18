@@ -146,9 +146,10 @@ class RepositorioDynamo:
             kw["FilterExpression"] = cond
         return [de_item(Ambulancia, i) for i in _scan_tudo(self._amb, **kw)]
 
-    def reservar_ambulancia(self, id: str, versao: int, chamado_id: str) -> Ambulancia:
+    def reservar_ambulancia(self, id: str, versao: int, chamado_id: str,
+                            heartbeat_em: float = 0.0) -> Ambulancia:
         return self.transicionar(id, StatusAmbulancia.DISPONIVEL, StatusAmbulancia.RESERVADA,
-                                 versao, chamado_id=chamado_id)
+                                 versao, chamado_id=chamado_id, heartbeat_em=heartbeat_em)
 
     def transicionar(self, id: str, de: StatusAmbulancia, para: StatusAmbulancia,
                      versao: int, **campos) -> Ambulancia:
