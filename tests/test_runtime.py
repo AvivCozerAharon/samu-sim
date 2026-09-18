@@ -11,7 +11,7 @@ def rodada(fator, inicio_real, inicio_sim=0.0):
 def test_relogio_da_rodada_usa_checkpoint():
     repo = RepositorioMemoria()
     repo.salvar_rodada(rodada(fator=10, inicio_real=1000.0, inicio_sim=500.0))
-    r = relogio_da_rodada(repo, agora_real=lambda: 1003.0)
+    r = relogio_da_rodada(repo, agora_real=lambda: 1003.0, mono=lambda: 1003.0)
     assert r.agora_sim() == 530.0 and r.fator == 10
 
 
@@ -19,7 +19,7 @@ def test_sincronizador_aplica_mudanca_de_fator():
     repo = RepositorioMemoria()
     repo.salvar_rodada(rodada(fator=10, inicio_real=1000.0))
     t = {"v": 1003.0}
-    r = relogio_da_rodada(repo, agora_real=lambda: t["v"])
+    r = relogio_da_rodada(repo, agora_real=lambda: t["v"], mono=lambda: t["v"])
     mudancas = []
     s = SincronizadorRelogio(r, repo, intervalo_seg=0.01, parar=threading.Event(),
                              ao_mudar=lambda rod: mudancas.append(rod.fator))
