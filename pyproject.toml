@@ -1,0 +1,21 @@
+[project]
+name = "samu-sim"
+version = "0.1.0"
+description = "Simulador distribuido de despacho de ambulancias (Rio de Janeiro)"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = ["integration: exige Docker/LocalStack"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["samu_sim*"]
