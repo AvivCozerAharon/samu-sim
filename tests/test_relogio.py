@@ -56,3 +56,32 @@ def test_dormir_sim_em_pedacos_respeita_mudanca_de_fator():
     r.dormir_sim(10)
     assert r.agora_sim() == pytest.approx(10.0, abs=0.01)
     assert sum(f.dormidas) < 5.0  # acelerou apos o 2o pedaco
+
+
+def test_sincronizar_substitui_checkpoint():
+    f = RelogioFake()
+    r = Relogio(fator=1, agora_real=f.agora, dormir_real=f.dormir)
+    f.t += 10                       # sim = 10
+    r.sincronizar(inicio_real=f.t - 2, inicio_sim=1000, fator=5)
+    assert r.agora_sim() == pytest.approx(1010)   # 1000 + 2*5
+    assert r.fator == 5
+
+
+def test_fator_zero_pausa_sem_dividir_por_zero():
+    f = RelogioFake()
+    r = Relogio(fator=10, agora_real=f.agora, dormir_real=f.dormir)
+    f.t += 1                        # sim = 10
+    r.definir_fator(0)
+    f.t += 100
+    assert r.agora_sim() == pytest.approx(10) and r.pausado
+    n = {"i": 0}
+
+    def dormir(s):
+        f.dormir(s)
+        n["i"] += 1
+        if n["i"] == 3:
+            r.definir_fator(10)
+
+    r._dormir_real = dormir
+    r.dormir_sim(20)
+    assert r.agora_sim() == pytest.approx(30, abs=0.01)

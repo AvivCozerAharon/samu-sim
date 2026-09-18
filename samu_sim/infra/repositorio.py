@@ -16,8 +16,11 @@ class ConflitoVersao(Exception):
 class Repositorio(Protocol):
     def salvar_ambulancia(self, a: Ambulancia) -> None: ...
     def obter_ambulancia(self, id: str) -> Ambulancia | None: ...
-    def listar_ambulancias(self, status: StatusAmbulancia | None = None) -> list[Ambulancia]: ...
+    def listar_ambulancias(self, status: StatusAmbulancia | None = None,
+                           worker_id: str | None = None) -> list[Ambulancia]: ...
     def reservar_ambulancia(self, id: str, versao: int, chamado_id: str) -> Ambulancia: ...
+    def atualizar_heartbeat(self, id: str, ts: float) -> None: ...
+    def liberar_ambulancia(self, id: str, versao: int, lat: float, lon: float) -> Ambulancia: ...
     def transicionar(self, id: str, de: StatusAmbulancia, para: StatusAmbulancia,
                      versao: int, **campos) -> Ambulancia: ...
     def salvar_chamado(self, c: Chamado) -> None: ...
@@ -44,9 +47,30 @@ class RepositorioMemoria:
             a = self._amb.get(id)
             return replace(a) if a else None
 
-    def listar_ambulancias(self, status: StatusAmbulancia | None = None) -> list[Ambulancia]:
+    def listar_ambulancias(self, status: StatusAmbulancia | None = None,
+                           worker_id: str | None = None) -> list[Ambulancia]:
         with self._lock:
-            return [replace(a) for a in self._amb.values() if status is None or a.status == status]
+            return [replace(a) for a in self._amb.values()
+                    if (status is None or a.status == status)
+                    and (worker_id is None or a.worker_id == worker_id)]
+
+    def atualizar_heartbeat(self, id: str, ts: float) -> None:
+        """Grava so o heartbeat, sem mexer na versao (nao invalida transicoes em voo)."""
+        with self._lock:
+            a = self._amb.get(id)
+            if a is not None:
+                self._amb[id] = replace(a, heartbeat_em=ts)
+
+    def liberar_ambulancia(self, id: str, versao: int, lat: float, lon: float) -> Ambulancia:
+        """Usado pelo reaper: forca DISPONIVEL de qualquer estado, condicional so na versao."""
+        with self._lock:
+            a = self._amb.get(id)
+            if a is None or a.versao != versao:
+                raise ConflitoVersao(f"{id}: esperado v{versao}, atual v{a.versao if a else None}")
+            novo = replace(a, status=StatusAmbulancia.DISPONIVEL, chamado_id=None,
+                           lat=lat, lon=lon, versao=versao + 1)
+            self._amb[id] = novo
+            return replace(novo)
 
     def reservar_ambulancia(self, id: str, versao: int, chamado_id: str) -> Ambulancia:
         return self.transicionar(id, StatusAmbulancia.DISPONIVEL, StatusAmbulancia.RESERVADA,
