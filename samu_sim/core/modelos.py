@@ -1,0 +1,81 @@
+"""Modelos de dominio do samu-sim. Tempos sao segundos simulados (float)."""
+from dataclasses import dataclass
+from enum import StrEnum
+
+
+class StatusAmbulancia(StrEnum):
+    DISPONIVEL = "disponivel"
+    RESERVADA = "reservada"
+    A_CAMINHO = "a_caminho"
+    NO_LOCAL = "no_local"
+    RETORNANDO = "retornando"
+
+
+class StatusChamado(StrEnum):
+    PENDENTE = "pendente"
+    DESPACHADO = "despachado"
+    ATENDIDO = "atendido"
+
+
+TRANSICOES_VALIDAS: set[tuple[StatusAmbulancia, StatusAmbulancia]] = {
+    (StatusAmbulancia.DISPONIVEL, StatusAmbulancia.RESERVADA),
+    (StatusAmbulancia.RESERVADA, StatusAmbulancia.A_CAMINHO),
+    (StatusAmbulancia.A_CAMINHO, StatusAmbulancia.NO_LOCAL),
+    (StatusAmbulancia.NO_LOCAL, StatusAmbulancia.RETORNANDO),
+    (StatusAmbulancia.NO_LOCAL, StatusAmbulancia.DISPONIVEL),
+    (StatusAmbulancia.RETORNANDO, StatusAmbulancia.DISPONIVEL),
+}
+
+
+def transicao_valida(de: StatusAmbulancia, para: StatusAmbulancia) -> bool:
+    return (de, para) in TRANSICOES_VALIDAS
+
+
+@dataclass
+class Base:
+    id: str
+    nome: str
+    lat: float
+    lon: float
+
+
+@dataclass
+class Ambulancia:
+    id: str
+    base_id: str
+    lat: float
+    lon: float
+    worker_id: str
+    status: StatusAmbulancia = StatusAmbulancia.DISPONIVEL
+    versao: int = 0
+    chamado_id: str | None = None
+    heartbeat_em: float = 0.0
+
+
+@dataclass
+class Chamado:
+    id: str
+    lat: float
+    lon: float
+    bairro: str
+    zona: str
+    criado_em: float
+    status: StatusChamado = StatusChamado.PENDENTE
+    despachado_em: float | None = None
+    chegada_em: float | None = None
+    liberado_em: float | None = None
+    ambulancia_id: str | None = None
+    tentativas: int = 0
+
+
+@dataclass
+class Rodada:
+    id: str
+    seed: int
+    politica: str
+    fator: float
+    n_ambulancias: int
+    roteador: str
+    inicio_real: float
+    inicio_sim: float
+    pausada: bool = False
