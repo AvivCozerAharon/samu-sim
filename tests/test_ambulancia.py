@@ -65,3 +65,30 @@ def test_tempo_de_resposta_registrado():
     w.aguardar_ciclos(timeout=5)
     chegou = next(e for e in log.eventos if e["tipo"] == "chegou")
     assert chegou["resposta_seg"] >= 300.0
+
+
+def test_heartbeat_so_nas_ambulancias_ativas_do_worker():
+    relogio, repo, fila, log, w = montar()
+    repo.salvar_ambulancia(Ambulancia(id="amb-2", base_id="b1", lat=0, lon=0, worker_id="w1"))  # disponivel
+    repo.salvar_ambulancia(Ambulancia(id="amb-9", base_id="b1", lat=0, lon=0, worker_id="w9"))  # outro worker
+    repo.reservar_ambulancia("amb-9", 0, "ch-x")
+    despachar(repo, fila)  # amb-1 reservada pelo w1
+    w._agora_real = lambda: 777.0
+    assert w.bater_heartbeat() == 1
+    assert repo.obter_ambulancia("amb-1").heartbeat_em == 777.0
+    assert repo.obter_ambulancia("amb-2").heartbeat_em == 0.0
+    assert repo.obter_ambulancia("amb-9").heartbeat_em == 0.0
+
+
+def test_thread_de_heartbeat_roda_e_para():
+    import threading
+    import time
+    relogio, repo, fila, log, w = montar()
+    despachar(repo, fila)
+    parar = threading.Event()
+    t = w.iniciar_heartbeat(intervalo_seg=0.02, parar=parar)
+    time.sleep(0.1)
+    parar.set()
+    t.join(timeout=1)
+    assert not t.is_alive()
+    assert repo.obter_ambulancia("amb-1").heartbeat_em > 0
