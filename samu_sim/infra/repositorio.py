@@ -18,7 +18,8 @@ class Repositorio(Protocol):
     def obter_ambulancia(self, id: str) -> Ambulancia | None: ...
     def listar_ambulancias(self, status: StatusAmbulancia | None = None,
                            worker_id: str | None = None) -> list[Ambulancia]: ...
-    def reservar_ambulancia(self, id: str, versao: int, chamado_id: str) -> Ambulancia: ...
+    def reservar_ambulancia(self, id: str, versao: int, chamado_id: str,
+                            heartbeat_em: float = 0.0) -> Ambulancia: ...
     def atualizar_heartbeat(self, id: str, ts: float) -> None: ...
     def liberar_ambulancia(self, id: str, versao: int, lat: float, lon: float) -> Ambulancia: ...
     def transicionar(self, id: str, de: StatusAmbulancia, para: StatusAmbulancia,
@@ -72,9 +73,10 @@ class RepositorioMemoria:
             self._amb[id] = novo
             return replace(novo)
 
-    def reservar_ambulancia(self, id: str, versao: int, chamado_id: str) -> Ambulancia:
+    def reservar_ambulancia(self, id: str, versao: int, chamado_id: str,
+                            heartbeat_em: float = 0.0) -> Ambulancia:
         return self.transicionar(id, StatusAmbulancia.DISPONIVEL, StatusAmbulancia.RESERVADA,
-                                 versao, chamado_id=chamado_id)
+                                 versao, chamado_id=chamado_id, heartbeat_em=heartbeat_em)
 
     def transicionar(self, id: str, de: StatusAmbulancia, para: StatusAmbulancia,
                      versao: int, **campos) -> Ambulancia:

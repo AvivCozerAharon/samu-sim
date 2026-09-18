@@ -14,7 +14,8 @@ from samu_sim.roteador import Roteador
 class Despachante:
     def __init__(self, fila_chamados: Fila, filas_eventos: dict[str, Fila], repo: Repositorio,
                  politica: Politica, roteador: Roteador, relogio: Relogio, eventlog: EventLog,
-                 cache_seg: float = 2.0):
+                 cache_seg: float = 2.0, agora_real=time.time):
+        self._agora_real = agora_real
         self._fila = fila_chamados
         self._filas_eventos = filas_eventos
         self._repo = repo
@@ -46,7 +47,9 @@ class Despachante:
         self._log.registrar("despacho_tentado", chamado_id=chamado_id, candidatas=len(candidatas))
         for amb in candidatas:
             try:
-                reservada = self._repo.reservar_ambulancia(amb.id, amb.versao, chamado_id)
+                # heartbeat na reserva: sem isso o reaper veria heartbeat_em=0 e liberaria na hora
+                reservada = self._repo.reservar_ambulancia(amb.id, amb.versao, chamado_id,
+                                                           heartbeat_em=self._agora_real())
             except ConflitoVersao:
                 self._log.registrar("reserva_falhou", chamado_id=chamado_id, ambulancia_id=amb.id)
                 self._invalidar_cache()

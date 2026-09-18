@@ -105,3 +105,11 @@ def test_dois_despachantes_concorrentes_nunca_duplicam():
     despachados = [c for c in repo.listar_chamados() if c.status == SC.DESPACHADO]
     assert len(despachados) == 1                       # so 1 ambulancia
     assert filas_ev["w0"].tamanho() == 1               # 1 evento despachada, nao 2
+
+
+def test_reserva_grava_heartbeat_para_o_reaper_nao_liberar_cedo():
+    relogio, repo, fila, filas_ev, log, d = montar()
+    d._agora_real = lambda: 4242.0
+    publicar_chamado(fila, repo)
+    d.processar_lote()
+    assert repo.obter_ambulancia("amb-0").heartbeat_em == 4242.0
