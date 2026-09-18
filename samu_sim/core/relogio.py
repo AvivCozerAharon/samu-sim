@@ -39,10 +39,25 @@ class Relogio:
             self._inicio_real = agora_real
             self._fator = float(novo)
 
+    @property
+    def pausado(self) -> bool:
+        return self._fator == 0
+
+    def sincronizar(self, inicio_real: float, inicio_sim: float, fator: float) -> None:
+        """Substitui o checkpoint (usado pelos servicos ao reler a tabela rodada)."""
+        with self._lock:
+            self._inicio_real = float(inicio_real)
+            self._inicio_sim = float(inicio_sim)
+            self._fator = float(fator)
+
     def dormir_sim(self, segundos: float) -> None:
         alvo = self.agora_sim() + segundos
         while True:
             resta_sim = alvo - self.agora_sim()
             if resta_sim <= 0:
                 return
-            self._dormir_real(min(resta_sim / self._fator, PEDACO_MAX_REAL))
+            fator = self._fator
+            if fator <= 0:  # pausado: espera sem dividir por zero
+                self._dormir_real(PEDACO_MAX_REAL)
+                continue
+            self._dormir_real(min(resta_sim / fator, PEDACO_MAX_REAL))

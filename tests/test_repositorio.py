@@ -95,3 +95,37 @@ def test_chamado_e_rodada():
     assert r.obter_rodada() is None
     r.salvar_rodada(Rodada("r1", 1, "mais_proxima", 10, 5, "haversine", 0, 0))
     assert r.obter_rodada().fator == 10
+
+
+def test_listar_por_worker():
+    r = RepositorioMemoria()
+    a = amb("a")
+    a.worker_id = "w0"
+    r.salvar_ambulancia(a)
+    b = amb("b")
+    b.worker_id = "w1"
+    r.salvar_ambulancia(b)
+    assert [x.id for x in r.listar_ambulancias(worker_id="w1")] == ["b"]
+    assert [x.id for x in r.listar_ambulancias(SA.DISPONIVEL, worker_id="w0")] == ["a"]
+
+
+def test_atualizar_heartbeat_nao_mexe_na_versao():
+    r = RepositorioMemoria()
+    r.salvar_ambulancia(amb())
+    a = r.reservar_ambulancia("amb-1", 0, "ch-1")
+    r.atualizar_heartbeat("amb-1", 1234.5)
+    b = r.obter_ambulancia("amb-1")
+    assert b.heartbeat_em == 1234.5 and b.versao == a.versao == 1
+    r.transicionar("amb-1", SA.RESERVADA, SA.A_CAMINHO, a.versao)
+
+
+def test_liberar_ambulancia_forca_disponivel_de_qualquer_estado():
+    r = RepositorioMemoria()
+    r.salvar_ambulancia(amb())
+    a = r.reservar_ambulancia("amb-1", 0, "ch-1")
+    a = r.transicionar("amb-1", SA.RESERVADA, SA.A_CAMINHO, a.versao)
+    b = r.liberar_ambulancia("amb-1", a.versao, lat=-1.0, lon=-2.0)
+    assert b.status == SA.DISPONIVEL and b.chamado_id is None and (b.lat, b.lon) == (-1.0, -2.0)
+    assert b.versao == a.versao + 1
+    with pytest.raises(ConflitoVersao):
+        r.liberar_ambulancia("amb-1", a.versao, lat=0, lon=0)
