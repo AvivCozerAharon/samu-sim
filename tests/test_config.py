@@ -13,3 +13,9 @@ def test_le_do_ambiente_com_tipos():
                             "FATOR": "5", "WORKER_ID": "w2", "SEED": "9"})
     assert c.aws_endpoint_url == "http://localstack:4566"
     assert c.n_workers == 3 and c.fator == 5.0 and c.worker_id == "w2" and c.seed == 9
+
+
+def test_reset_bool():
+    assert Config.do_ambiente({}).reset is False
+    assert Config.do_ambiente({"RESET": "1"}).reset is True
+    assert Config.do_ambiente({"RESET": "false"}).reset is False
