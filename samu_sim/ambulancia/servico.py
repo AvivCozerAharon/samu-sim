@@ -3,6 +3,7 @@ simula o ciclo a_caminho -> no_local -> retornando -> disponivel. Cada transicao
 e condicional em (status, versao); duplicatas/atrasos sao rejeitados."""
 import random
 import threading
+import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 
 from samu_sim.core.modelos import Base, StatusAmbulancia as SA, StatusChamado
@@ -17,8 +18,9 @@ class WorkerAmbulancia:
     def __init__(self, worker_id: str, fila_eventos: Fila, repo: Repositorio, relogio: Relogio,
                  roteador: Roteador, bases: dict[str, Base], eventlog: EventLog,
                  atendimento_seg: tuple[float, float] = (600, 1200),
-                 max_simultaneas: int = 50, seed: int = 0):
+                 max_simultaneas: int = 50, seed: int = 0, agora_real=time.time):
         self.worker_id = worker_id
+        self._agora_real = agora_real
         self._fila = fila_eventos
         self._repo = repo
         self._relogio = relogio
@@ -41,7 +43,7 @@ class WorkerAmbulancia:
                 if a is None:
                     raise ConflitoVersao("ambulancia inexistente")
                 self._repo.transicionar(amb_id, SA.RESERVADA, SA.A_CAMINHO, a.versao,
-                                        heartbeat_em=self._relogio.agora_sim())
+                                        heartbeat_em=self._agora_real())
             except ConflitoVersao as e:
                 self._log.registrar("transicao_rejeitada", ambulancia_id=amb_id, chamado_id=ch_id,
                                     de="reservada", para="a_caminho", motivo=str(e))
@@ -61,6 +63,27 @@ class WorkerAmbulancia:
             pendentes = set(self._em_voo)
         wait(pendentes, timeout=timeout)
 
+    def bater_heartbeat(self) -> int:
+        """Atualiza heartbeat_em (tempo real) das ambulancias ativas deste worker."""
+        ts = self._agora_real()
+        n = 0
+        for a in self._repo.listar_ambulancias(worker_id=self.worker_id):
+            if a.status != SA.DISPONIVEL:
+                self._repo.atualizar_heartbeat(a.id, ts)
+                n += 1
+        return n
+
+    def iniciar_heartbeat(self, intervalo_seg: float, parar: threading.Event) -> threading.Thread:
+        def loop():
+            while not parar.wait(intervalo_seg):
+                try:
+                    self.bater_heartbeat()
+                except Exception as e:  # noqa: BLE001 - heartbeat nunca derruba o worker
+                    self._log.registrar("erro_heartbeat", worker_id=self.worker_id, erro=repr(e))
+        t = threading.Thread(target=loop, name=f"heartbeat-{self.worker_id}", daemon=True)
+        t.start()
+        return t
+
     def encerrar(self) -> None:
         self._pool.shutdown(wait=False, cancel_futures=True)
 
@@ -74,7 +97,7 @@ class WorkerAmbulancia:
     def _transicionar(self, amb_id: str, de: SA, para: SA, **campos):
         a = self._repo.obter_ambulancia(amb_id)
         return self._repo.transicionar(amb_id, de, para, a.versao,
-                                       heartbeat_em=self._relogio.agora_sim(), **campos)
+                                       heartbeat_em=self._agora_real(), **campos)
 
     def _ciclo(self, amb_id: str, ch_id: str, eta: float) -> None:
         chamado = self._repo.obter_chamado(ch_id)
