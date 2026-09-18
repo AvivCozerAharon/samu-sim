@@ -92,3 +92,20 @@ def test_thread_de_heartbeat_roda_e_para():
     t.join(timeout=1)
     assert not t.is_alive()
     assert repo.obter_ambulancia("amb-1").heartbeat_em > 0
+
+
+def test_mensagem_antiga_para_ambulancia_reatribuida_e_rejeitada():
+    """Worker morre, reaper libera a ambulancia e ela e reservada para OUTRO chamado;
+    ao voltar, o worker recebe a mensagem antiga: nao pode executar o ciclo errado."""
+    relogio, repo, fila, log, w = montar()
+    despachar(repo, fila)                                   # msg antiga: amb-1 -> ch-1
+    a = repo.obter_ambulancia("amb-1")
+    repo.liberar_ambulancia("amb-1", a.versao, BASE.lat, BASE.lon)   # reaper
+    a = repo.obter_ambulancia("amb-1")
+    repo.salvar_chamado(Chamado(id="ch-2", lat=-22.96, lon=-43.26, bairro="Y", zona="Sul", criado_em=50))
+    repo.reservar_ambulancia("amb-1", a.versao, "ch-2")     # reatribuida a ch-2
+    assert w.processar_lote() == 1
+    w.aguardar_ciclos(timeout=2)
+    assert log.contar("transicao_rejeitada") == 1
+    assert repo.obter_ambulancia("amb-1").status == SA.RESERVADA   # intacta, esperando a msg certa
+    assert repo.obter_chamado("ch-1").chegada_em is None
