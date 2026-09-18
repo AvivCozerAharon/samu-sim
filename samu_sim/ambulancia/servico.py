@@ -42,6 +42,9 @@ class WorkerAmbulancia:
             try:
                 if a is None:
                     raise ConflitoVersao("ambulancia inexistente")
+                if a.chamado_id != ch_id:
+                    # mensagem antiga: o reaper liberou e a ambulancia ja foi reatribuida
+                    raise ConflitoVersao(f"reservada para {a.chamado_id}, msg e de {ch_id}")
                 self._repo.transicionar(amb_id, SA.RESERVADA, SA.A_CAMINHO, a.versao,
                                         heartbeat_em=self._agora_real())
             except ConflitoVersao as e:
