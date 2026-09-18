@@ -16,14 +16,19 @@ def test_analisar_calcula_metricas_e_detecta_duplicatas():
         ev("chegou", 300, chamado_id="a", zona="Sul", resposta_seg=300),
         ev("chegou", 900, chamado_id="b", zona="Oeste", resposta_seg=900),
         ev("reaper_liberou", 950, ambulancia_id="9"),
+        ev("chamado_criado", 0, chamado_id="c", zona="Sul"),
+        ev("despachada", 30, chamado_id="c", ambulancia_id="4", espera_seg=30),
+        ev("reaper_liberou", 200, ambulancia_id="4", chamado_id="c"),
+        ev("despachada", 210, chamado_id="c", ambulancia_id="5", espera_seg=210),  # legitimo
     ]
     r = analisar(eventos)
     assert r["resposta"]["n"] == 2 and r["resposta"]["p50"] == 600
     assert r["por_zona"]["Oeste"]["p90"] == 900
-    assert r["espera_despacho"]["p50"] == 20
-    assert r["contagens"]["reaper_liberou"] == 1
+    assert r["espera_despacho"]["p50"] == 25
+    assert r["contagens"]["reaper_liberou"] == 2
     assert r["despachos_duplicados"] == ["b"]
-    assert r["chamados_criados"] == 2 and r["chamados_atendidos"] == 2
+    assert r["redespachados_pelo_reaper"] == ["c"]
+    assert r["chamados_criados"] == 3 and r["chamados_atendidos"] == 2
 
 
 def test_carregar_eventos_ordena_por_ts_sim(tmp_path):

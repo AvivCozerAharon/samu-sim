@@ -81,8 +81,16 @@ def semear(cfg: Config, repo: RepositorioDynamo | None = None, agora_real=time.t
 
 
 def main() -> None:
+    """Idempotente: se ja existe uma rodada, nao mexe em nada (docker compose start
+    re-executa este one-shot; apagar o estado no meio de uma rodada quebraria os
+    ciclos em voo). Para recomecar: RESET=1 ou docker compose down -v."""
     cfg = Config.do_ambiente()
     criar_recursos(cfg)
+    existente = RepositorioDynamo(recurso_dynamo(cfg), cfg).obter_rodada()
+    if existente is not None and not cfg.reset:
+        print(f"bootstrap: rodada existente (fator {existente.fator}, politica {existente.politica}); "
+              f"mantendo. Use RESET=1 para re-semear.")
+        return
     r = semear(cfg)
     print(f"bootstrap ok: {cfg.n_ambulancias} ambulancias, {cfg.n_workers} workers, "
           f"fator {r.fator}, politica {r.politica}, endpoint {cfg.aws_endpoint_url}")

@@ -27,6 +27,7 @@ class Config:
     reaper_intervalo_seg: float = 60.0
     sync_relogio_seg: float = 10.0
     api_porta: int = 8000
+    reset: bool = False  # bootstrap: apaga e re-semeia mesmo se ja houver rodada
 
     @classmethod
     def do_ambiente(cls, env: Mapping[str, str] = os.environ) -> "Config":
@@ -38,6 +39,8 @@ class Config:
             tipo = f.type if isinstance(f.type, type) else str
             if f.name == "aws_endpoint_url":
                 valores[f.name] = bruto
+            elif tipo is bool:
+                valores[f.name] = bruto.strip().lower() in ("1", "true", "sim", "yes")
             elif tipo is int:
                 valores[f.name] = int(bruto)
             elif tipo is float:
