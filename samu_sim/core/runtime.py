@@ -58,7 +58,8 @@ def montar_infra(cfg: Config) -> Infra:
     return Infra(repo, fila(cfg.fila_chamados), filas_eventos, bases, carregar_bairros(dados / "bairros.csv"))
 
 
-def relogio_da_rodada(repo: Repositorio, agora_real=time.time, espera_max_seg: float = 60.0) -> Relogio:
+def relogio_da_rodada(repo: Repositorio, agora_real=time.time, espera_max_seg: float = 60.0,
+                      mono=time.monotonic) -> Relogio:
     fim = time.monotonic() + espera_max_seg
     while True:
         rodada = repo.obter_rodada()
@@ -67,7 +68,7 @@ def relogio_da_rodada(repo: Repositorio, agora_real=time.time, espera_max_seg: f
         if time.monotonic() > fim:
             raise RuntimeError("tabela rodada vazia: rode o bootstrap")
         time.sleep(1)
-    r = Relogio(agora_real=agora_real)
+    r = Relogio(agora_real=agora_real, mono=mono)
     r.sincronizar(rodada.inicio_real, rodada.inicio_sim, rodada.fator)
     return r
 

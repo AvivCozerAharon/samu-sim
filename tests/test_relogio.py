@@ -85,3 +85,19 @@ def test_fator_zero_pausa_sem_dividir_por_zero():
     r._dormir_real = dormir
     r.dormir_sim(20)
     assert r.agora_sim() == pytest.approx(30, abs=0.01)
+
+
+def test_salto_do_wall_clock_nao_afeta_tempo_simulado():
+    """Depois de sincronizar, o relogio avanca com o monotonico: um salto do
+    wall-clock (NTP, VM) nao volta o tempo simulado nem o faz pular."""
+    wall = {"t": 1000.0}
+    mono = {"t": 50.0}
+    r = Relogio(fator=10, agora_real=lambda: wall["t"], mono=lambda: mono["t"])
+    r.sincronizar(inicio_real=998.0, inicio_sim=0.0, fator=10)   # sim = 20
+    assert r.agora_sim() == pytest.approx(20.0)
+    mono["t"] += 3.0
+    wall["t"] -= 236.0          # salto para tras
+    assert r.agora_sim() == pytest.approx(50.0)   # 20 + 3*10, ignora o salto
+    mono["t"] += 1.0
+    wall["t"] += 500.0          # salto para frente
+    assert r.agora_sim() == pytest.approx(60.0)
