@@ -50,11 +50,15 @@ Atualizado em 2026-09-19 (D6).
 
 ## Ciclo da ambulância — **calibrado com literatura**
 
-- Deslocamento: tempos do OSRM na malha OSM do Rio (extrato BBBike), perfil `car`, sem trânsito
-  (**subestima horário de pico**).
+- Deslocamento: tempos do OSRM na malha OSM do Rio (extrato BBBike), perfil `car`, de via livre.
+  Com `TRANSITO=1`, multiplicados por um fator por hora (`FATORES_TRANSITO`): 1,0 de madrugada,
+  1,5 às 8–9 h, 1,3 no meio do dia, 1,55 às 17–19 h — **estimativa** a partir do TomTom Traffic
+  Index do Rio (~40–60 % de congestionamento nos picos); o certo seria trânsito por corredor e hora
+  (COR/Waze).
 - No local: 20–30 min (uniforme). Transporte ao **hospital de emergência mais próximo** (12
-  hospitais), entrega 8–15 min, depois retorno à base — durante o retorno a ambulância **não** é
-  despachável (**simplificação**; na prática pode ser).
+  hospitais), entrega 8–15 min. Ao liberar, a ambulância já é despachável e volta à base movendo-se
+  (retorno interrompível). Com `REPOSICIONAMENTO=1`, volta para a base de maior demanda prevista
+  (modelo zona × hora em `dados/demanda_prevista.json`, treinado só com eventos `chamado_criado`).
 - Meta usada nos gráficos: P90 ≤ 15 min (referência comum de serviços de emergência; o SAMU-RJ
   não publica meta oficial).
 
