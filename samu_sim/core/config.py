@@ -27,6 +27,9 @@ class Config:
     reaper_intervalo_seg: float = 60.0
     sync_relogio_seg: float = 10.0
     api_porta: int = 8000
+    osrm_url: str = "http://localhost:5000"
+    osrm_timeout_seg: float = 2.0
+    matriz_path: str = "dados/matriz_eta.json"
     reset: bool = False  # bootstrap: apaga e re-semeia mesmo se ja houver rodada
 
     @classmethod
