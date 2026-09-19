@@ -62,3 +62,19 @@ class EventLogJsonl(_Base):
         with self._lock:
             if not self._arquivo.closed:
                 self._arquivo.close()
+
+
+def enviar_para_s3(log_dir, rodada_id: str, bucket: str, servico: str, s3=None) -> str | None:
+    """Envia <log_dir>/<rodada_id>/<servico>.jsonl para s3://<bucket>/<rodada_id>/<servico>.jsonl.
+    Sem bucket configurado ou sem arquivo, nao faz nada (retorna None)."""
+    if not bucket:
+        return None
+    arquivo = Path(log_dir) / rodada_id / f"{servico}.jsonl"
+    if not arquivo.exists():
+        return None
+    if s3 is None:
+        import boto3
+        s3 = boto3.client("s3")
+    chave = f"{rodada_id}/{servico}.jsonl"
+    s3.upload_file(str(arquivo), bucket, chave)
+    return chave
