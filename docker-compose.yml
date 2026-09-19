@@ -80,8 +80,9 @@ services:
     volumes:
       - ./dados/osrm:/data
     ports: ["5000:5000"]
+    # a imagem nao tem wget/curl: healthcheck via /dev/tcp do bash
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- 'http://localhost:5000/route/v1/driving/-43.18,-22.90;-43.19,-22.91' | grep -q Ok"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/5000' || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 30
