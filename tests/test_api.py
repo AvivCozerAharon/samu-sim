@@ -135,3 +135,28 @@ def test_turnos_endpoint(tmp_path):
     arq.write_text(json.dumps({"J_inicial": 30, "J_final": 28, "turnos": []}), encoding="utf-8")
     app = criar_app(repo, FilaMemoria(), {}, relogio, EventLogMemoria(relogio, "api"), turnos_path=arq)
     assert TestClient(app).get("/turnos").json()["J_final"] == 28
+
+
+def test_cenarios_fluxo():
+    import time
+    from samu_sim.cenarios import GerenciadorCenarios, executar
+    from tests.test_cenarios import fake_rodar
+    c, repo, relogio, t = montar()
+    assert c.post("/cenarios", json={"cenario": {"nome": "x"}}).status_code == 503
+    g = GerenciadorCenarios(lambda cen, s, d, f: executar(cen, s, d, f, fake_rodar))
+    app = criar_app(repo, FilaMemoria(), {}, relogio, EventLogMemoria(relogio, "api"), gerenciador_cenarios=g)
+    cli = TestClient(app)
+    r1 = cli.post("/cenarios", json={"cenario": {"nome": "73"}, "seeds": [1, 2, 3]})
+    r2 = cli.post("/cenarios", json={"cenario": {"nome": "80", "n_ambulancias": 80}, "seeds": [1, 2, 3]})
+    assert r1.status_code == 202
+    a, b = r1.json()["id"], r2.json()["id"]
+    for _ in range(200):
+        if cli.get(f"/cenarios/{b}").json()["status"] == "concluido":
+            break
+        time.sleep(0.02)
+    assert cli.get("/cenarios").json()[0]["id"] == a
+    d = cli.get(f"/cenarios/{a}/comparar/{b}").json()
+    assert d["p90"]["media"] == -70 and d["p90"]["significativo"] is True
+    assert cli.get("/cenarios/nao-existe").status_code == 404
+    assert cli.post("/cenarios", json={"cenario": {"nome": "y", "campo_invalido": 1}}).status_code == 202
+    g.encerrar()

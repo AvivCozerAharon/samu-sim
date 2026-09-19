@@ -98,6 +98,35 @@
   .turnos-txt{font-size:12px;color:var(--apagado);line-height:1.4}
   .turnos-txt b{color:var(--texto);font-weight:500}
   .turnos-txt ul{margin:4px 0 0;padding-left:16px}
+  /* cenarios "e se...?" */
+  .cen-form{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:12.5px}
+  .cen-form label{display:flex;flex-direction:column;gap:3px;color:var(--apagado)}
+  .cen-form label.linha{grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;color:var(--texto)}
+  .cen-form input,.cen-form select{background:#0F1923;color:var(--texto);border:1px solid var(--linha);border-radius:4px;padding:6px 8px;font:inherit;font-size:12.5px}
+  .cen-form input[type=checkbox]{width:14px;height:14px;padding:0;accent-color:var(--ret)}
+  .cen-form button{grid-column:1/-1;padding:9px 0;border:1px solid var(--linha);background:transparent;color:var(--texto);border-radius:4px;font:inherit;font-weight:500;cursor:pointer}
+  .cen-form button:hover{background:#22303E}
+  .cen-form button:focus-visible,.cen-lista li:focus-visible{outline:2px solid var(--ret);outline-offset:2px}
+  .cen-lista{list-style:none;margin:12px 0 0;padding:0;font-size:12.5px}
+  .cen-lista li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 8px;border:1px solid transparent;border-radius:4px;cursor:pointer}
+  .cen-lista li:hover{background:#1A2633}
+  .cen-lista li[aria-selected="true"]{border-color:#2E5478;background:#1A2A3A}
+  .cen-lista .n{font-weight:500}
+  .cen-lista .s{color:var(--apagado);font-size:11.5px;grid-column:1/-1}
+  .cen-lista .p{text-align:right;font-variant-numeric:tabular-nums}
+  .cen-lista .p small{color:var(--apagado);font-size:11px}
+  .cen-comp{margin-top:10px;font-size:12.5px;line-height:1.5;color:var(--apagado)}
+  .cen-comp b{color:var(--texto);font-weight:500}
+  .cen-comp .sig{color:var(--disp)}
+  .cen-aviso{color:var(--apagado);font-size:12px;margin-top:8px}
+  .exp-lista{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px}
+  .exp-lista li{display:flex;justify-content:space-between;gap:10px;padding:4px 0}
+  .exp-lista li b{font-weight:500}
+  .exp-lista .d{font-variant-numeric:tabular-nums;color:var(--disp)}
+  .exp-lista .d.ns{color:var(--apagado)}
+  .exp-lista .ctrl{color:var(--apagado);border-top:1px dashed var(--linha);margin-top:4px;padding-top:6px}
+  .exp-tog{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--apagado);cursor:pointer}
+  .exp-tog input{accent-color:var(--disp)}
   .rodape{margin-top:auto;padding-top:14px;color:var(--apagado);font-size:11.5px}
   .rodape span{color:var(--texto)}
 
@@ -227,6 +256,26 @@
       <div class="titulo"><h2>Turnos que aprendem</h2><span id="turnosInfo">–</span></div>
       <div class="turnos-j" id="turnosJ"></div>
       <div class="turnos-txt" id="turnosTxt"></div>
+    </section>
+    <section id="secExpansao" hidden>
+      <div class="titulo"><h2>Onde abrir a próxima base</h2><span id="expInfo">–</span></div>
+      <ul class="exp-lista" id="expLista"></ul>
+      <label class="exp-tog"><input type="checkbox" id="expMapa"> mostrar candidatas no mapa</label>
+    </section>
+    <section id="secCenarios">
+      <div class="titulo"><h2>E se…? Cenários com intervalo de confiança</h2></div>
+      <form class="cen-form" id="cenForm">
+        <label>ambulâncias <input type="number" name="n" min="10" max="200" value="73"></label>
+        <label>política <select name="pol"><option value="menor_eta">menor ETA</option><option value="mais_proxima">mais próxima</option><option value="menor_eta_cobertura">menor ETA + cobertura</option></select></label>
+        <label>seeds <select name="seeds"><option value="3">3 (rápido)</option><option value="5" selected>5</option><option value="10">10 (preciso)</option></select></label>
+        <label>duração simulada <select name="dur"><option value="21600">6 h</option><option value="43200">12 h</option><option value="86400" selected>24 h</option></select></label>
+        <label class="linha"><input type="checkbox" name="transito"> trânsito por hora</label>
+        <label class="linha"><input type="checkbox" name="repos"> reposicionamento por demanda prevista</label>
+        <button type="submit">Simular cenário</button>
+      </form>
+      <ul class="cen-lista" id="cenLista" role="listbox" aria-label="cenários" aria-multiselectable="true"></ul>
+      <div class="cen-comp" id="cenComp"></div>
+      <div class="cen-aviso" id="cenAviso">Cada cenário roda a mesma simulação N vezes em memória (uma por vez). Selecione dois concluídos para ver a diferença pareada por seed.</div>
     </section>
     <div class="rodape">rodada <span id="rodada">–</span> · roteador <span id="roteador">–</span> · <span id="nAmb">–</span> ambulâncias</div>
   </aside>
@@ -544,7 +593,65 @@ async function turnos(){
   $('turnosTxt').innerHTML = `<b>Último movimento aceito (turno ${ult.numero})</b><ul>${ult.acoes.slice(0, 3).map(a => `<li>${a}</li>`).join('')}</ul>` +
     `<div style="margin-top:6px">verde = aceito · cinza = rejeitado · J = 3·P90<sub>vermelho</sub> + P90<sub>amarelo</sub> + ½·P90<sub>verde</sub> (min)</div>`;
 }
-pollEstado(); metricas(); eventos(); conectar(); turnos();
+
+// ---- cenarios "e se...?" ----
+const cenSel = new Set(); let cenTimer = null;
+const min1 = v => v == null ? '–' : (v / 60).toFixed(1);
+const ic = r => r && r.media != null ? `${min1(r.media)} <small>[${min1(r.baixo)}, ${min1(r.alto)}]</small>` : '–';
+const cenNome = f => `${f.n.value} amb · ${f.pol.selectedOptions[0].text}${f.transito.checked ? ' · trânsito' : ''}${f.repos.checked ? ' · repos.' : ''}`;
+$('cenForm').onsubmit = async ev => {
+  ev.preventDefault(); const f = ev.target;
+  const seeds = [42, 7, 2024, 11, 99, 5, 23, 77, 31, 8].slice(0, +f.seeds.value);
+  const corpo = {cenario: {nome: cenNome(f), n_ambulancias: +f.n.value, politica: f.pol.value, transito: f.transito.checked, reposicionamento: f.repos.checked},
+                 seeds, duracao_sim_seg: +f.dur.value};
+  const r = await fetch('/cenarios', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(corpo)});
+  if (r.status === 503) { $('cenAviso').textContent = 'Cenários estão desligados nesta instância.'; return; }
+  cenarios();
+};
+async function cenarios(){
+  const r = await fetch('/cenarios'); if (!r.ok) return;
+  const jobs = await r.json();
+  const detalhes = await Promise.all(jobs.map(j => j.status === 'concluido' ? fetch('/cenarios/' + j.id).then(x => x.json()) : j));
+  $('cenLista').innerHTML = detalhes.map(j => {
+    const st = {na_fila: 'na fila', rodando: 'simulando…', concluido: '', erro: 'falhou'}[j.status];
+    const res = j.resultado && j.resultado.resumo;
+    const p = res ? `<div class="p">P90 ${ic(res.p90)}<br><small>vermelhos ${min1(res.p90_vermelho.media)} · pendentes ${res.pendentes.media.toFixed(0)}</small></div>` : `<div class="p"><small>${st}</small></div>`;
+    return `<li role="option" tabindex="0" data-id="${j.id}" data-ok="${j.status === 'concluido'}" aria-selected="${cenSel.has(j.id)}"><div class="n">${j.cenario.nome}</div>${p}<div class="s">${j.seeds.length} seeds · ${j.duracao_sim_seg / 3600} h${j.resultado ? ` · ${j.resultado.tempo_real_seg} s reais` : ''}</div></li>`;
+  }).join('');
+  const aberto = jobs.some(j => j.status === 'na_fila' || j.status === 'rodando');
+  clearTimeout(cenTimer); if (aberto) cenTimer = setTimeout(cenarios, 5000);
+  comparar();
+}
+$('cenLista').addEventListener('click', ev => { const li = ev.target.closest('li'); if (!li || li.dataset.ok !== 'true') return;
+  if (cenSel.has(li.dataset.id)) cenSel.delete(li.dataset.id); else { if (cenSel.size >= 2) cenSel.delete([...cenSel][0]); cenSel.add(li.dataset.id); }
+  [...$('cenLista').children].forEach(x => x.setAttribute('aria-selected', cenSel.has(x.dataset.id))); comparar(); });
+$('cenLista').addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.target.click(); } });
+async function comparar(){
+  const el = $('cenComp'); if (cenSel.size < 2) { el.innerHTML = ''; return; }
+  const [a, b] = [...cenSel];
+  const r = await fetch(`/cenarios/${a}/comparar/${b}`); if (!r.ok) { el.innerHTML = `<b>Não dá pra comparar:</b> ${(await r.json()).detail}`; return; }
+  const d = await r.json(); const na = $('cenLista').querySelector(`[data-id="${a}"] .n`).textContent, nb = $('cenLista').querySelector(`[data-id="${b}"] .n`).textContent;
+  const linha = (k, rot, esc = 60, un = 'min') => { const x = d[k]; if (!x || x.media == null) return ''; const s = x.significativo;
+    return `<div>${rot}: <b class="${s ? 'sig' : ''}">${x.media > 0 ? '+' : ''}${(x.media / esc).toFixed(1)} ${un}</b> [${(x.baixo / esc).toFixed(1)}, ${(x.alto / esc).toFixed(1)}]${s ? ' ✓' : ' (não significativo)'}</div>`; };
+  el.innerHTML = `<b>${nb}</b> em relação a <b>${na}</b>, mesmas seeds:` + linha('p90', 'P90') + linha('p90_vermelho', 'P90 vermelhos') + linha('Barra', 'P90 Barra') + linha('Oeste', 'P90 Oeste') + linha('pendentes', 'pendentes', 1, 'chamados');
+}
+// ---- experimento D: onde abrir a proxima base ----
+const camadaExp = L.layerGroup();
+async function expansao(){
+  const r = await fetch('/expansao'); if (!r.ok) return;
+  const e = await r.json(); $('secExpansao').hidden = false;
+  $('expInfo').textContent = `+${e.config.extra} ambulâncias · ${e.config.seeds_final.length} seeds`;
+  const ctrl = e.vs_controle.p90;
+  $('expLista').innerHTML = e.finalistas.map(f => { const d = f.vs_baseline.p90;
+    return `<li><b>${f.cand.bairro}</b> <span class="d ${d.significativo ? '' : 'ns'}">${min1(d.media)} min [${min1(d.baixo)}, ${min1(d.alto)}]</span></li>`; }).join('') +
+    `<li class="ctrl"><span>mesmas +${e.config.extra} em ${e.config.controle_base}</span><span class="d ${ctrl.significativo ? '' : 'ns'}">${min1(ctrl.media)} min</span></li>`;
+  e.triagem.forEach(t => { const fin = e.finalistas.find(f => f.cand.id === t.cand.id);
+    const m = L.circleMarker([t.cand.lat, t.cand.lon], {radius: fin ? 9 : 6, color: fin ? '#3DDC97' : '#5C6F82', weight: fin ? 2 : 1, fillColor: '#3DDC97', fillOpacity: fin ? .35 : .1});
+    m.bindTooltip(`<b>${t.cand.bairro}</b><br>${fin ? `P90 ${min1(fin.vs_baseline.p90.media)} min vs frota atual` : `triagem: ${min1(-t.ganho_seg)} min`}`);
+    camadaExp.addLayer(m); });
+  $('expMapa').onchange = ev => ev.target.checked ? camadaExp.addTo(mapa) : mapa.removeLayer(camadaExp);
+}
+pollEstado(); metricas(); eventos(); conectar(); turnos(); cenarios(); expansao();
 setInterval(metricas, 3000); setInterval(eventos, 1500);
 </script>
 </body>

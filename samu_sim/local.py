@@ -50,7 +50,8 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
           chamados_por_dia: int = 300, n_despachantes: int = 2, n_workers: int = 2,
           visibilidade_seg: float = 30.0, log_dir: str | None = None,
           cfg: Config | None = None, alocacao: dict[str, int] | None = None,
-          reposicionamento: bool = False, transito: bool = False) -> dict:
+          reposicionamento: bool = False, transito: bool = False,
+          bases_extra: list[Base] | None = None) -> dict:
     rodada_id = uuid.uuid4().hex[:8]
     if transito:
         cfg = replace(cfg or Config(), transito=True)
@@ -59,7 +60,7 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
     repo.salvar_rodada(Rodada(rodada_id, seed, politica, fator, n_ambulancias, roteador,
                               *relogio.checkpoint()))
     bairros = carregar_bairros("dados/bairros.csv")
-    bases = carregar_bases("dados/bases.csv")
+    bases = carregar_bases("dados/bases.csv") + list(bases_extra or [])  # extras: candidatas do experimento D
     for a in montar_frota(bases, n_ambulancias, n_workers, alocacao):
         repo.salvar_ambulancia(a)
 
@@ -129,7 +130,8 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
     return {
         "rodada": {"id": rodada_id, "fator": fator, "politica": politica, "roteador": roteador,
                    "seed": seed, "n_ambulancias": n_ambulancias, "duracao_sim_seg": duracao_sim_seg,
-                   "reposicionamento": reposicionamento, "transito": transito},
+                   "reposicionamento": reposicionamento, "transito": transito,
+                   "bases_extra": [b.id for b in (bases_extra or [])]},
         "metricas": calcular(repo.listar_chamados()),
         "eventos": dict(eventos),
         "roteador_fallbacks": getattr(rot, "fallbacks", 0),
