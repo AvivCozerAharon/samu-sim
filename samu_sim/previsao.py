@@ -19,7 +19,8 @@ from samu_sim.core.modelos import Base, StatusAmbulancia
 from samu_sim.gerador.demanda import Bairro
 
 ZONAS = ("Centro", "Sul", "Norte", "Barra", "Oeste")
-RAIO_REPOSICIONAMENTO_KM = 15.0
+RAIO_REPOSICIONAMENTO_KM = 8.0
+GANHO_MINIMO = 1.5  # so muda de base se a pressao la for >= 1.5x a da base atual
 HORAS_PREVISAO = 2
 
 
@@ -91,6 +92,11 @@ class Reposicionador:
             candidatas.append((-pressao, d, b))
         candidatas.sort(key=lambda x: (x[0], x[1]))
         melhor = candidatas[0][2]
+        # so vale a viagem se a pressao no alvo for claramente maior que na base de origem
+        za = self._zona.get(base_atual)
+        pressao_atual = self._modelo.prever(za, agora_sim) / (livres.get(za, 0) + 1) if za else 0.0
+        if base_atual in self._bases and -candidatas[0][0] < GANHO_MINIMO * pressao_atual:
+            melhor = self._bases[base_atual]
         return melhor, {"zona": self._zona[melhor.id], "pressao": -candidatas[0][0],
                         "prevista_2h": self._modelo.prever(self._zona[melhor.id], agora_sim),
                         "livres_na_zona": livres.get(self._zona[melhor.id], 0)}
