@@ -15,3 +15,15 @@ def test_ranking_de_demanda_bate_com_samu_2024():
     top = sorted(bairros, key=lambda b: -b.populacao * b.fator_demanda)[:3]
     assert [b.nome for b in top] == ["Campo Grande", "Santa Cruz", "Centro"]
     assert next(b for b in bairros if b.nome == "Paqueta").fator_demanda == 0
+
+
+def test_bases_reais_hospitais_e_upas():
+    from samu_sim.gerador.demanda import carregar_bases
+    bases = carregar_bases("dados/bases.csv")
+    assert len(bases) >= 40
+    tipos = {b.tipo for b in bases}
+    assert tipos == {"hospital", "upa"}
+    assert sum(1 for b in bases if b.tipo == "hospital") == 12
+    for b in bases:
+        assert -23.10 < b.lat < -22.74 and -43.80 < b.lon < -43.09, b.nome
+    assert len({(b.lat, b.lon) for b in bases}) == len(bases)  # sem pontos duplicados

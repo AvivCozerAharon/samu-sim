@@ -41,7 +41,7 @@ def carregar_bairros(caminho: str | Path) -> list[Bairro]:
 
 def carregar_bases(caminho: str | Path) -> list[Base]:
     with open(caminho, encoding="utf-8", newline="") as f:
-        return [Base(r["id"], r["nome"], float(r["lat"]), float(r["lon"]))
+        return [Base(r["id"], r["nome"], float(r["lat"]), float(r["lon"]), r.get("tipo") or "base")
                 for r in csv.DictReader(f)]
 
 
