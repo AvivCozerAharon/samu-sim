@@ -19,3 +19,80 @@ def test_criar_roteador():
     assert criar_roteador("haversine").nome == "haversine"
     with pytest.raises(ValueError):
         criar_roteador("teletransporte")
+
+
+# ---------- OSRM ----------
+from samu_sim.core.config import Config  # noqa: E402
+from samu_sim.roteador import RoteadorOSRM  # noqa: E402
+
+
+def test_osrm_usa_duration_da_resposta():
+    urls = []
+
+    def http_get(url, timeout):
+        urls.append(url)
+        return {"code": "Ok", "routes": [{"duration": 1234.5, "distance": 9000}]}
+
+    r = RoteadorOSRM("http://osrm:5000", RoteadorHaversine(), http_get=http_get)
+    assert r.eta(COPACABANA, CENTRO) == 1234.5
+    assert urls[0] == "http://osrm:5000/route/v1/driving/-43.1822,-22.9711;-43.1829,-22.9068?overview=false"
+    assert r.fallbacks == 0
+
+
+def test_osrm_cai_para_fallback_em_erro_e_conta():
+    motivos = []
+
+    def http_get(url, timeout):
+        raise TimeoutError("lento")
+
+    r = RoteadorOSRM("http://osrm:5000", RoteadorHaversine(vel_kmh=30), timeout_seg=0.1,
+                     http_get=http_get, ao_falhar=motivos.append)
+    assert r.eta(COPACABANA, CENTRO) == pytest.approx(858, abs=30)
+    assert r.fallbacks == 1 and "lento" in motivos[0]
+
+
+def test_osrm_code_nao_ok_tambem_e_fallback():
+    r = RoteadorOSRM("http://x", RoteadorHaversine(), http_get=lambda u, t: {"code": "NoRoute"})
+    assert r.eta(CENTRO, CENTRO) == 0.0 and r.fallbacks == 1
+
+
+def test_criar_roteador_osrm_com_config():
+    r = criar_roteador("osrm", Config(osrm_url="http://osrm:5000"))
+    assert r.nome == "osrm"
+
+
+# ---------- matriz ----------
+import json  # noqa: E402
+from samu_sim.roteador import RoteadorMatriz  # noqa: E402
+
+
+def matriz_tmp(tmp_path):
+    m = {"gerado_em": "x", "fonte": "teste", "raio_km": 1.5,
+         "pontos": {"base-01": list(CENTRO), "Copacabana": list(COPACABANA)},
+         "eta": {"base-01": {"Copacabana": 1000.0}, "Copacabana": {"base-01": 1100.0}}}
+    p = tmp_path / "m.json"
+    p.write_text(json.dumps(m), encoding="utf-8")
+    return p
+
+
+def test_matriz_usa_lookup_quando_perto_dos_pontos(tmp_path):
+    r = RoteadorMatriz(matriz_tmp(tmp_path), RoteadorHaversine())
+    assert r.eta(CENTRO, COPACABANA) == 1000.0
+    assert r.eta(COPACABANA, CENTRO) == 1100.0
+    perto = (COPACABANA[0] + 0.004, COPACABANA[1])  # ~450 m do centroide
+    e = r.eta(CENTRO, perto)
+    assert 1000.0 < e < 1000.0 + 120
+    assert r.fallbacks == 0
+
+
+def test_matriz_cai_para_fallback_longe_dos_pontos(tmp_path):
+    motivos = []
+    r = RoteadorMatriz(matriz_tmp(tmp_path), RoteadorHaversine(vel_kmh=30), ao_falhar=motivos.append)
+    longe = (-23.0, -43.6)
+    assert r.eta(CENTRO, longe) == pytest.approx(RoteadorHaversine(30).eta(CENTRO, longe))
+    assert r.fallbacks == 1 and "fora da matriz" in motivos[0]
+
+
+def test_criar_roteador_matriz(tmp_path):
+    r = criar_roteador("matriz", Config(matriz_path=str(matriz_tmp(tmp_path))))
+    assert r.nome == "matriz"
