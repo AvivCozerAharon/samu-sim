@@ -90,6 +90,14 @@
   #pausa{padding:9px 0;border:1px solid var(--linha);background:transparent;color:var(--texto);border-radius:4px;font:inherit;font-weight:500;cursor:pointer}
   #pausa:hover{background:#22303E}
   #pausa.pausado{border-color:var(--res);color:var(--res)}
+  .turnos-j{display:flex;align-items:flex-end;gap:3px;height:54px;margin:4px 0 8px}
+  .turnos-j i{flex:1;background:#33445A;border-radius:2px 2px 0 0;position:relative;min-width:6px}
+  .turnos-j i.ok{background:var(--disp)}
+  .turnos-j i.base{background:var(--ret)}
+  .turnos-j i:hover:after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--painel);border:1px solid var(--linha);border-radius:4px;padding:3px 6px;font-size:11px;white-space:nowrap;margin-bottom:4px;z-index:5}
+  .turnos-txt{font-size:12px;color:var(--apagado);line-height:1.4}
+  .turnos-txt b{color:var(--texto);font-weight:500}
+  .turnos-txt ul{margin:4px 0 0;padding-left:16px}
   .rodape{margin-top:auto;padding-top:14px;color:var(--apagado);font-size:11.5px}
   .rodape span{color:var(--texto)}
 
@@ -214,6 +222,11 @@
       <div class="titulo"><h2>Velocidade da simulação</h2></div>
       <div class="vel" id="vel" role="group" aria-label="fator de aceleração"></div>
       <button id="pausa">Pausar</button>
+    </section>
+    <section id="secTurnos" hidden>
+      <div class="titulo"><h2>Turnos que aprendem</h2><span id="turnosInfo">–</span></div>
+      <div class="turnos-j" id="turnosJ"></div>
+      <div class="turnos-txt" id="turnosTxt"></div>
     </section>
     <div class="rodape">rodada <span id="rodada">–</span> · roteador <span id="roteador">–</span> · <span id="nAmb">–</span> ambulâncias</div>
   </aside>
@@ -521,7 +534,17 @@ function conectar(){
   ws.onmessage = ev => { $('vivo').classList.remove('off'); $('vivo').lastElementChild.textContent = 'ao vivo'; aplicarEstado(JSON.parse(ev.data)); };
   ws.onclose = () => { $('vivo').classList.add('off'); $('vivo').lastElementChild.textContent = 'reconectando'; setTimeout(conectar, 2000); };
 }
-pollEstado(); metricas(); eventos(); conectar();
+async function turnos(){
+  const r = await fetch('/turnos'); if (!r.ok) return;
+  const t = await r.json(); const sec = $('secTurnos'); sec.hidden = false;
+  const js = t.turnos.map(x => x.J), max = Math.max(...js), min = Math.min(...js);
+  $('turnosInfo').textContent = `J ${t.J_inicial.toFixed(1)} → ${t.J_final.toFixed(1)} em ${t.turnos.length} turnos`;
+  $('turnosJ').innerHTML = t.turnos.map(x => `<i class="${x.J_anterior == null && x.numero === 1 ? 'base' : x.aceito ? 'ok' : ''}" style="height:${20 + 80 * (max === min ? .5 : (x.J - min) / (max - min))}%" data-t="turno ${x.numero}: J ${x.J.toFixed(1)} ${x.aceito ? 'aceito' : 'rejeitado'}"></i>`).join('');
+  const ult = [...t.turnos].reverse().find(x => x.aceito && x.numero > 1) || t.turnos[t.turnos.length - 1];
+  $('turnosTxt').innerHTML = `<b>Último movimento aceito (turno ${ult.numero})</b><ul>${ult.acoes.slice(0, 3).map(a => `<li>${a}</li>`).join('')}</ul>` +
+    `<div style="margin-top:6px">verde = aceito · cinza = rejeitado · J = 3·P90<sub>vermelho</sub> + P90<sub>amarelo</sub> + ½·P90<sub>verde</sub> (min)</div>`;
+}
+pollEstado(); metricas(); eventos(); conectar(); turnos();
 setInterval(metricas, 3000); setInterval(eventos, 1500);
 </script>
 </body>

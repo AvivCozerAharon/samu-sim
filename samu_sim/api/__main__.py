@@ -20,7 +20,7 @@ def main() -> None:
     log = EventLogJsonl(cfg.log_dir, relogio, "api", cfg.rodada_id)
     app = criar_app(infra.repo, infra.fila_chamados, infra.bases, relogio, log,
                     reaper_timeout_seg=cfg.reaper_timeout_seg, log_dir=cfg.log_dir,
-                    rodada_id=cfg.rodada_id)
+                    rodada_id=cfg.rodada_id, turnos_path="docs/experimentos/turnos.json")
 
     def loop_reaper():
         while not parar.wait(cfg.reaper_intervalo_seg):
