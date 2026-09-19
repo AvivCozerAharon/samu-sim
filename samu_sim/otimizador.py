@@ -14,7 +14,7 @@ from samu_sim.gerador.demanda import Bairro
 
 PESO_PRIORIDADE = {"vermelho": 3.0, "amarelo": 1.0, "verde": 0.5}
 RAIO_DEMANDA_KM = 5.0      # demanda "coberta" por uma base: bairros a ate 5 km
-ESPERA_RELEVANTE_SEG = 60  # chamado que esperou mais que isso por ambulancia conta como fila
+ESPERA_RELEVANTE_SEG = 180  # esperou > 3 min por ambulancia = fila (abaixo disso e latencia de despacho)
 
 
 def objetivo(metricas: dict) -> float:
@@ -78,7 +78,7 @@ def propor(diag: dict, alocacao: dict[str, int], bases: dict[str, Base], bairros
     pior_zona = None
     pior_score = -1.0
     for zona, p90 in diag["p90_zona"].items():
-        score = (p90 or 0) / 60 + 5 * diag["esperaram_por_zona"].get(zona, 0)
+        score = (p90 or 0) / 60 + 2 * diag["esperaram_por_zona"].get(zona, 0)
         if score > pior_score:
             pior_zona, pior_score = zona, score
     if pior_zona is None:
@@ -128,7 +128,7 @@ class Otimizador:
     bases: dict[str, Base]
     bairros: list[Bairro]
     alocacao: dict[str, int]
-    tolerancia: float = 0.01           # aceita se J cair pelo menos 1 %
+    tolerancia: float = 0.02           # aceita se J cair pelo menos 2 % (acima do ruido entre rodadas)
     historico: list[Turno] = field(default_factory=list)
     ja_tentadas: set = field(default_factory=set)
     _melhor_J: float | None = None
