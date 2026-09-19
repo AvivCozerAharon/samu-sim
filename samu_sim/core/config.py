@@ -30,6 +30,7 @@ class Config:
     osrm_url: str = "http://localhost:5000"
     osrm_timeout_seg: float = 2.0
     matriz_path: str = "dados/matriz_eta.json"
+    s3_bucket: str = ""  # vazio = nao envia event log para o S3
     reset: bool = False  # bootstrap: apaga e re-semeia mesmo se ja houver rodada
 
     @classmethod
