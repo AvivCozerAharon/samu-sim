@@ -73,7 +73,7 @@ def grafico_b(res: dict, saida: Path) -> None:
     ax.set_yticks(ticks, [str(t) for t in ticks])
     ax.set_ylim(5, 600)
     c = res["config"]
-    ax.set_title(f"B · tamanho da frota — menor ETA, {c['chamados_por_dia']} chamados/dia, "
+    ax.set_title(f"B · tamanho da frota — menor ETA{' + reposicionamento + trânsito' if c.get('B_realismo') else ''}, {c['chamados_por_dia']} chamados/dia, "
                  f"{len(c['seeds'])} seed(s)", loc="left", fontsize=11)
     ax.legend(loc="upper right")
     fig.tight_layout()
@@ -110,6 +110,27 @@ def grafico_c(turnos: dict, saida: Path) -> None:
     fig.savefig(saida / "c_turnos.png", dpi=150)
 
 
+def grafico_e(res: dict, saida: Path) -> None:
+    nomes = list(res["E"])
+    fig, ax = plt.subplots(figsize=(9, 4.2))
+    x = range(len(nomes))
+    for i, (chave, cor, rot) in enumerate((("p90", "#4FC3F7", "P90 geral"), ("p90_vermelho", "#FF5A5F", "P90 vermelhos"))):
+        med = [(res["E"][n]["resumo"][chave]["media"] or 0) / 60 for n in nomes]
+        dp = [(res["E"][n]["resumo"][chave]["dp"] or 0) / 60 for n in nomes]
+        ax.bar([xi + (i - 0.5) * 0.36 for xi in x], med, 0.34, yerr=dp, capsize=2, color=cor, label=rot,
+               error_kw={"ecolor": "#E8EEF4", "elinewidth": .8})
+    ax.axhline(META_MIN, color="#FFC857", lw=1.2, ls="--")
+    ax.text(len(nomes) - 0.55, META_MIN + 0.4, "meta 15 min", color="#FFC857", ha="right", fontsize=9)
+    ax.set_xticks(list(x), nomes)
+    ax.set_ylabel("P90 do tempo de resposta (min)")
+    c = res["config"]
+    ax.set_title(f"E · realismo operacional — {c.get('frota_a', 73)} ambulâncias, {c['chamados_por_dia']} chamados/dia, "
+                 f"{len(c['seeds'])} seed(s)", loc="left", fontsize=11)
+    ax.legend(loc="upper left")
+    fig.tight_layout()
+    fig.savefig(saida / "e_realismo.png", dpi=150)
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--entrada", default="docs/experimentos/resultados.json")
@@ -119,8 +140,12 @@ def main() -> None:
     saida = Path(a.saida)
     saida.mkdir(parents=True, exist_ok=True)
     estilo()
-    grafico_a(res, saida)
-    grafico_b(res, saida)
+    if res.get("A"):
+        grafico_a(res, saida)
+    if res.get("B"):
+        grafico_b(res, saida)
+    if res.get("E"):
+        grafico_e(res, saida)
     turnos = Path(a.entrada).parent / "turnos.json"
     if turnos.exists():
         grafico_c(json.loads(turnos.read_text(encoding="utf-8")), saida)
