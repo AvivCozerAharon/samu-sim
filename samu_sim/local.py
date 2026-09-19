@@ -6,7 +6,7 @@ import threading
 import time
 import uuid
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 from samu_sim.ambulancia.servico import WorkerAmbulancia
@@ -50,8 +50,10 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
           chamados_por_dia: int = 300, n_despachantes: int = 2, n_workers: int = 2,
           visibilidade_seg: float = 30.0, log_dir: str | None = None,
           cfg: Config | None = None, alocacao: dict[str, int] | None = None,
-          reposicionamento: bool = False) -> dict:
+          reposicionamento: bool = False, transito: bool = False) -> dict:
     rodada_id = uuid.uuid4().hex[:8]
+    if transito:
+        cfg = replace(cfg or Config(), transito=True)
     relogio = Relogio(fator=fator)
     repo = RepositorioMemoria()
     repo.salvar_rodada(Rodada(rodada_id, seed, politica, fator, n_ambulancias, roteador,
@@ -75,7 +77,7 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
 
     fila_chamados = {p: FilaMemoria(visibilidade_seg=visibilidade_seg) for p in PRIORIDADES}
     filas_eventos = {f"w{k}": FilaMemoria(visibilidade_seg=visibilidade_seg) for k in range(n_workers)}
-    rot = criar_roteador(roteador, cfg)
+    rot = criar_roteador(roteador, cfg, relogio=relogio)
     bases_por_id = {b.id: b for b in bases}
 
     chamados = GeradorChamados(bairros, seed, chamados_por_dia).gerar_dia(0)
@@ -127,7 +129,7 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
     return {
         "rodada": {"id": rodada_id, "fator": fator, "politica": politica, "roteador": roteador,
                    "seed": seed, "n_ambulancias": n_ambulancias, "duracao_sim_seg": duracao_sim_seg,
-                   "reposicionamento": reposicionamento},
+                   "reposicionamento": reposicionamento, "transito": transito},
         "metricas": calcular(repo.listar_chamados()),
         "eventos": dict(eventos),
         "roteador_fallbacks": getattr(rot, "fallbacks", 0),
@@ -151,10 +153,12 @@ def main() -> None:
     p.add_argument("--osrm-url", default="http://localhost:5000")
     p.add_argument("--matriz", default="dados/matriz_eta.json")
     p.add_argument("--reposicionamento", action="store_true")
+    p.add_argument("--transito", action="store_true")
     a = p.parse_args()
     cfg = Config(osrm_url=a.osrm_url, matriz_path=a.matriz)
     r = rodar(a.fator, a.duracao_sim, a.ambulancias, a.politica, a.roteador, a.seed,
-              a.chamados_por_dia, log_dir=a.log_dir, cfg=cfg, reposicionamento=a.reposicionamento)
+              a.chamados_por_dia, log_dir=a.log_dir, cfg=cfg, reposicionamento=a.reposicionamento,
+              transito=a.transito)
     print(json.dumps(r, indent=2, ensure_ascii=False))
 
 

@@ -31,6 +31,7 @@ class Config:
     osrm_timeout_seg: float = 2.0
     matriz_path: str = "dados/matriz_eta.json"
     s3_bucket: str = ""  # vazio = nao envia event log para o S3
+    transito: bool = False  # multiplica o ETA pelo fator de transito da hora simulada
     reposicionamento: bool = False  # ambulancia livre vai para a base de maior demanda prevista
     demanda_path: str = "dados/demanda_prevista.json"
     reset: bool = False  # bootstrap: apaga e re-semeia mesmo se ja houver rodada

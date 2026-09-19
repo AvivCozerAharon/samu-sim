@@ -27,7 +27,7 @@ def main() -> None:
         reposicionador = Reposicionador(ModeloDemanda.carregar(cfg.demanda_path), infra.bases, infra.bairros, infra.repo)
         logging.info(f"reposicionamento ligado ({cfg.demanda_path})")
     w = WorkerAmbulancia(cfg.worker_id, infra.filas_eventos[cfg.worker_id], infra.repo, relogio,
-                         criar_roteador(rodada.roteador, cfg), infra.bases, log, seed=rodada.seed,
+                         criar_roteador(rodada.roteador, cfg, relogio=relogio), infra.bases, log, seed=rodada.seed,
                          reposicionador=reposicionador)
     w.iniciar_heartbeat(cfg.heartbeat_seg, parar)
     logging.info(f"{nome}: pronto (heartbeat a cada {cfg.heartbeat_seg}s)")

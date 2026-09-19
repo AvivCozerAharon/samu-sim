@@ -118,3 +118,26 @@ def test_etas_de_padrao_faz_loop():
     r = RoteadorHaversine()
     assert r.etas_de([CENTRO, COPACABANA], CENTRO) == [0.0, r.eta(COPACABANA, CENTRO)]
     assert r.etas_de([], CENTRO) == []
+
+
+# ---------- transito (D8) ----------
+from samu_sim.roteador import FATORES_TRANSITO, RoteadorComTransito  # noqa: E402
+
+
+def test_transito_multiplica_pelo_fator_da_hora():
+    hora = {"t": 3 * 3600}
+    r = RoteadorComTransito(RoteadorHaversine(vel_kmh=30), lambda: hora["t"])
+    livre = RoteadorHaversine(30).eta(COPACABANA, CENTRO)
+    assert r.eta(COPACABANA, CENTRO) == pytest.approx(livre * FATORES_TRANSITO[3])
+    hora["t"] = 18 * 3600 + 120
+    assert r.eta(COPACABANA, CENTRO) == pytest.approx(livre * 1.55)
+    assert r.etas_de([COPACABANA, CENTRO], CENTRO) == pytest.approx([livre * 1.55, 0.0])
+    assert r.nome == "haversine+transito" and r.fallbacks == 0
+
+
+def test_criar_roteador_liga_transito_pela_config():
+    from samu_sim.core.relogio import Relogio
+    rel = Relogio(fator=1, inicio_sim=18 * 3600)
+    assert criar_roteador("haversine", Config(transito=True), relogio=rel).nome == "haversine+transito"
+    assert criar_roteador("haversine", Config(transito=False), relogio=rel).nome == "haversine"
+    assert criar_roteador("haversine", Config(transito=True)).nome == "haversine"  # sem relogio, nao envolve
