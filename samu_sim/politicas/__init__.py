@@ -29,7 +29,8 @@ class MenorEta:
 
     def escolher(self, chamado, disponiveis, roteador):
         destino = (chamado.lat, chamado.lon)
-        return sorted(disponiveis, key=lambda a: roteador.eta((a.lat, a.lon), destino))
+        etas = roteador.etas_de([(a.lat, a.lon) for a in disponiveis], destino)
+        return [a for _, _, a in sorted(zip(etas, range(len(etas)), disponiveis))]
 
 
 class MenorEtaCobertura:
@@ -43,13 +44,12 @@ class MenorEtaCobertura:
     def escolher(self, chamado, disponiveis, roteador):
         por_base = Counter(a.base_id for a in disponiveis)
         destino = (chamado.lat, chamado.lon)
-
-        def chave(a):
-            eta = roteador.eta((a.lat, a.lon), destino)
+        etas = roteador.etas_de([(a.lat, a.lon) for a in disponiveis], destino)
+        ordem = []
+        for i, (a, eta) in enumerate(zip(disponiveis, etas)):
             penal = self._penalidade if por_base[a.base_id] == 1 else 0.0
-            return (eta + penal, eta)
-
-        return sorted(disponiveis, key=chave)
+            ordem.append((eta + penal, eta, i, a))
+        return [a for _, _, _, a in sorted(ordem)]
 
 
 _POLITICAS = {"mais_proxima": MaisProxima, "menor_eta": MenorEta,

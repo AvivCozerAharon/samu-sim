@@ -96,3 +96,25 @@ def test_matriz_cai_para_fallback_longe_dos_pontos(tmp_path):
 def test_criar_roteador_matriz(tmp_path):
     r = criar_roteador("matriz", Config(matriz_path=str(matriz_tmp(tmp_path))))
     assert r.nome == "matriz"
+
+
+# ---------- lote ----------
+def test_etas_de_em_lote_no_osrm_usa_table():
+    urls = []
+
+    def http_get(url, timeout):
+        urls.append(url)
+        return {"code": "Ok", "durations": [[100.0], [200.0], [None]]}
+
+    r = RoteadorOSRM("http://osrm:5000", RoteadorHaversine(vel_kmh=30), http_get=http_get)
+    origens = [CENTRO, COPACABANA, (-23.0, -43.6)]
+    etas = r.etas_de(origens, CENTRO)
+    assert etas[0] == 100.0 and etas[1] == 200.0
+    assert etas[2] == pytest.approx(RoteadorHaversine(30).eta(origens[2], CENTRO))  # null -> fallback
+    assert len(urls) == 1 and "/table/v1/driving/" in urls[0] and "destinations=3" in urls[0]
+
+
+def test_etas_de_padrao_faz_loop():
+    r = RoteadorHaversine()
+    assert r.etas_de([CENTRO, COPACABANA], CENTRO) == [0.0, r.eta(COPACABANA, CENTRO)]
+    assert r.etas_de([], CENTRO) == []
