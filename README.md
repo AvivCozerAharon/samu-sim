@@ -2,7 +2,8 @@
 
 Simulador **distribuído** de despacho de ambulâncias no Rio de Janeiro, construído como
 ferramenta de apoio à decisão: *qual política de despacho reduz o tempo de resposta na Zona
-Oeste?* e *a partir de quantas ambulâncias o ganho é marginal?*
+Oeste?*, *a partir de quantas ambulâncias o ganho é marginal?* e *onde abrir a próxima base?* —
+cada resposta com intervalo de confiança.
 
 Chamados sintéticos (proporcionais à população por bairro, com picos de manhã e à noite) entram
 numa fila **SQS**; N **despachantes** concorrentes escolhem a ambulância por uma política plugável e
@@ -107,6 +108,67 @@ da ligação — exige dados reais de chamadas. Aprender a política de despacho
 vistosa e a que eu não faria: caro de treinar num simulador em tempo real acelerado e impossível de
 defender em 35 minutos.
 
+## Onde abrir a próxima base (D9 — experimento D)
+
+![expansão](docs/img/d_expansao.png)
+
+O otimizador de turnos (D7) mostrou que **realocar** a frota não resolve a Barra (P90 ≈ 19 min com a
+alocação otimizada). A pergunta seguinte é a que a prefeitura faz de verdade: *com orçamento para
+2 ambulâncias, vale mais abrir uma base nova ou reforçar uma existente — e onde?*
+
+Método, em dois estágios pra caber em 30 min de máquina:
+
+1. **Heurística barata**: candidatas = centróides dos bairros a mais de 5 km de qualquer base, ordenados
+   pela demanda populacional descoberta (`samu_sim/expansao.py`). Dá 10 candidatas — todas na Barra
+   e na Zona Oeste (Guaratiba, Recreio, Itanhangá, Vargens…).
+2. **Triagem** (1 seed, 12 h) de cada candidata com +2 ambulâncias na base nova, e **final** (5 seeds,
+   24 h) das 4 melhores contra dois cenários com as mesmas seeds: a **frota atual** (73, alocação
+   otimizada) e um **controle** — as mesmas +2 ambulâncias na base existente mais pressionada
+   (UPA Engenho Novo). Sem o controle, o ganho seria confundido com "mais frota".
+
+| cenário (+2 ambulâncias) | P90 geral | P90 Barra | Δ P90 vs frota atual [IC 95 %] | Δ vs controle |
+|---|---|---|---|---|
+| frota atual (73) | 14,1 | 19,2 | — | — |
+| +2 em UPA Engenho Novo (controle) | 14,1 | 19,4 | −0,1 [−0,5, +0,3] n.s. | — |
+| **base nova em Vargem Pequena** | **13,2** | **17,3** | **−0,9 [−1,3, −0,5]** | −0,8 [−1,1, −0,6] |
+| base nova no Recreio | 13,3 | 17,3 | −0,9 [−1,3, −0,5] | −0,8 [−0,9, −0,7] |
+| base nova em Pedra de Guaratiba | 13,5 | 19,3 | −0,6 [−1,2, −0,2] | −0,6 (Oeste −1,1, Barra 0) |
+| base nova em Vargem Grande | 13,6 | 17,4 | −0,6 [−1,0, −0,2] | −0,5 [−0,7, −0,3] |
+
+Leitura:
+
+- **Reforçar uma base existente não muda nada** (−0,1 min, IC contém zero). O sistema já está na
+  faixa estável (experimento B): ambulância extra onde já há cobertura vira ociosidade.
+- **Uma base nova nas Vargens/Recreio reduz o P90 da cidade em ~0,9 min e o da Barra em ~2 min**
+  (19,2 → 17,3), com IC que exclui zero mesmo com 5 seeds — porque a comparação é pareada por seed.
+- Pedra de Guaratiba ajuda a Zona Oeste (−1,1) e não a Barra: candidatas diferentes atacam zonas
+  diferentes; a escolha depende de qual zona a Secretaria quer priorizar.
+- Nenhuma delas leva a Barra à meta de 15 min: é o mesmo veredito do D8 — **mais via do que frota**.
+
+Reproduzir: `python scripts/experimento_d.py` (≈ 28 min; `--rapido` em 5 min) → `docs/experimentos/expansao.json`,
+`python scripts/graficos.py`. O console mostra as finalistas na seção "Onde abrir a próxima base" e
+as candidatas no mapa.
+
+## Cenários com intervalo de confiança (D9)
+
+Até o D8 cada comparação era "média de 3 seeds". Um gestor precisa de *"abrir uma base no Recreio
+reduz o P90 em 2,0 ± 0,3 min"* — senão não dá pra distinguir efeito de ruído. O D9 transforma
+isso em instrumento:
+
+- `samu_sim/estatistica.py` — IC 95 % por **bootstrap** (Python puro, determinístico) e
+  **diferença pareada por seed**: os dois cenários rodam com as *mesmas* seeds (common random
+  numbers), então a variância do gerador de chamados cancela e o IC da diferença fica muito mais
+  estreito do que comparar duas médias independentes. "Significativo" = IC da diferença não contém 0
+  (exige ≥ 3 seeds).
+- `samu_sim/cenarios.py` — um `Cenario` descreve frota, política, alocação por base, bases extras,
+  trânsito e reposicionamento; `executar` roda N seeds e resume com IC; `comparar` faz a diferença
+  pareada por métrica (P90, P50, P90 vermelhos, pendentes, P90 por zona).
+- API: `POST /cenarios` enfileira um job (uma simulação em memória por vez, numa thread da API),
+  `GET /cenarios/{id}` devolve o resultado, `GET /cenarios/{a}/comparar/{b}` a diferença pareada.
+  O console tem a seção **"E se…?"**: escolhe frota/política/seeds/duração, submete e seleciona dois
+  cenários concluídos pra ver a diferença com IC.
+- CLI: `python scripts/cenarios.py --base '{"nome":"73"}' --alt '{"nome":"80","n_ambulancias":80}'`.
+
 ## Decisões de arquitetura (e o que mudou)
 
 | Decisão | Por quê | O que aprendi |
@@ -124,14 +186,14 @@ defender em 35 minutos.
 - **Relógio lógico** (ticks) em vez de tempo real acelerado: reprodutibilidade exata e rodadas
   em segundos; custa uma barreira de sincronização entre serviços.
 - **Fargate + ALB** no lugar da EC2 única; **WebSocket + React** no lugar do polling.
-- **Dados reais** do Data.Rio (bairros/UPAs/SAMU) no lugar dos 19 bairros e 10 bases-proxy.
 - **Trânsito real** (COR/Waze por corredor e hora) no lugar do perfil estimado — é a variável que
   mais muda a conclusão, e a menos calibrada.
 - **Reposicionamento com objetivo explícito** (cobertura garantida por zona, não pressão relativa) —
-  a versão atual é neutra; a próxima deveria ser avaliada com intervalo de confiança antes de qualquer
-  ajuste.
-- Experimento D: onde abrir 1 base nova na Barra/Jacarepaguá (o otimizador de turnos já mostrou que
-  realocar não resolve a zona).
+  a versão atual é neutra; agora dá pra avaliar a próxima com `scripts/cenarios.py` antes de ajustar.
+- **Preempção**: desviar uma ambulância a caminho de um verde para um vermelho a 2 min — cancelar um
+  ciclo em voo em outro processo é o melhor problema distribuído que sobrou.
+- **Replay** do event log (reconstruir o estado em qualquer instante) e **frota heterogênea**
+  (USA/USB/motolância, troca de plantão) — os dois mudam o que a política pode decidir.
 
 ---
 
@@ -268,3 +330,4 @@ caminho → no local → concluído) com a câmera enquadrando. Estado também p
 - [x] D6: dados reais (Censo 2022, hospitais/UPAs, estatísticas do SAMU-RJ), gravidade, ciclo com hospital
 - [x] D7: filas por prioridade, otimizador de turnos (alocação por base), console de turnos
 - [x] D8: despachável ao liberar, previsão de demanda + reposicionamento, trânsito por hora (ablação medida)
+- [x] D9: cenários com IC (bootstrap, diferença pareada por seed, `POST /cenarios`), experimento D (onde abrir a próxima base)

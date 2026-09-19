@@ -132,46 +132,64 @@ def grafico_e(res: dict, saida: Path) -> None:
 
 
 def grafico_d(exp: dict, saida: Path) -> None:
-    """Mapa (lat/lon) das candidatas a base nova: tamanho = demanda descoberta, cor = ganho de P90 na
-    triagem; finalistas com anel e a diferenca pareada [IC] contra a frota atual."""
+    """Esquerda: diferenca pareada do P90 (com IC 95 %) de cada finalista e do controle contra a frota
+    atual. Direita: mapa (lat/lon) das candidatas triadas — tamanho = demanda descoberta, cor = ganho
+    na triagem, finalistas numeradas."""
     from samu_sim.gerador.demanda import carregar_bases
     bases = carregar_bases("dados/bases.csv")
-    fig, ax = plt.subplots(figsize=(9, 6.2))
-    ax.grid(False)
-    ax.scatter([b.lon for b in bases], [b.lat for b in bases], s=14, color="#5C6F82", marker="s", label="bases atuais")
+    cfg, ctrl = exp["config"], exp["vs_controle"]["p90"]
+    fig, (ax, mp) = plt.subplots(1, 2, figsize=(12.5, 5.2), gridspec_kw={"width_ratios": [1, 1.25]})
+
+    # --- barras: finalistas + controle, diferenca de P90 vs frota atual (min) ---
+    fin = exp["finalistas"]
+    rot = [f"{i + 1}. {f['cand']['bairro']}" for i, f in enumerate(fin)] + [f"+{cfg['extra']} em {cfg['controle_base']}"]
+    dif = [f["vs_baseline"]["p90"] for f in fin] + [ctrl]
+    y = list(range(len(rot)))[::-1]
+    for yi, d, r in zip(y, dif, rot):
+        cor = "#3DDC97" if d["significativo"] else "#8A9BAE"
+        ax.barh(yi, d["media"] / 60, color=cor, height=.58,
+                xerr=[[(d["media"] - d["baixo"]) / 60], [(d["alto"] - d["media"]) / 60]], capsize=3,
+                error_kw={"ecolor": "#E8EEF4", "elinewidth": .9})
+        ax.text(min(d["baixo"] / 60, 0) - 0.08, yi, f"{d['media'] / 60:+.1f}", va="center", ha="right", fontsize=9.5)
+    ax.axvline(0, color="#5C6F82", lw=.8)
+    ax.set_yticks(y, rot)
+    ax.set_xlabel("diferença do P90 vs frota atual (min) · IC 95 % pareado por seed")
+    ax.set_title(f"D · onde abrir a próxima base — +{cfg['extra']} ambulâncias, {len(cfg['seeds_final'])} seeds, 24 h",
+                 loc="left", fontsize=11)
+    ax.text(0.02, 0.03, "verde = IC não contém 0 · cinza = não significativo", transform=ax.transAxes,
+            fontsize=8.5, color="#8A9BAE")
+    ax.set_xlim(min(d["baixo"] for d in dif) / 60 - 0.5, max(0.3, max(d["alto"] for d in dif) / 60 + 0.3))
+
+    # --- mapa das candidatas ---
+    mp.grid(False)
+    mp.scatter([b.lon for b in bases], [b.lat for b in bases], s=14, color="#5C6F82", marker="s", label="bases atuais")
     tri = exp["triagem"]
     ganhos = [-t["ganho_seg"] / 60 for t in tri]
-    tam = [40 + 260 * t["cand"]["demanda_descoberta"] / max(x["cand"]["demanda_descoberta"] for x in tri) for t in tri]
+    dmax = max(t["cand"]["demanda_descoberta"] for t in tri)
+    tam = [40 + 260 * t["cand"]["demanda_descoberta"] / dmax for t in tri]
     lim = max(abs(g) for g in ganhos) or 1
-    sc = ax.scatter([t["cand"]["lon"] for t in tri], [t["cand"]["lat"] for t in tri], s=tam, c=ganhos,
+    sc = mp.scatter([t["cand"]["lon"] for t in tri], [t["cand"]["lat"] for t in tri], s=tam, c=ganhos,
                     cmap="RdYlGn", vmin=-lim, vmax=lim, edgecolor="#0F1923", linewidth=.6, zorder=3)
-    finais = {f["cand"]["id"]: f for f in exp["finalistas"]}
-    for t in tri:
+    num = {f["cand"]["id"]: i + 1 for i, f in enumerate(fin)}
+    for t, s_ in zip(tri, tam):
         c = t["cand"]
-        if c["id"] in finais:
-            d = finais[c["id"]]["vs_baseline"]["p90"]
-            ax.scatter([c["lon"]], [c["lat"]], s=tam[tri.index(t)] * 1.9, facecolor="none", edgecolor="#FFC857",
-                       linewidth=1.4, zorder=2)
-            sig = "" if d["significativo"] else " (n.s.)"
-            ax.annotate(f"{c['bairro']}
-{d['media'] / 60:+.1f} min [{d['baixo'] / 60:+.1f}, {d['alto'] / 60:+.1f}]{sig}",
-                        (c["lon"], c["lat"]), xytext=(8, 8), textcoords="offset points", fontsize=8.5, color="#E8EEF4")
+        if c["id"] in num:
+            mp.scatter([c["lon"]], [c["lat"]], s=s_ * 2.0, facecolor="none", edgecolor="#FFC857", linewidth=1.4, zorder=2)
+            mp.annotate(str(num[c["id"]]), (c["lon"], c["lat"]), xytext=(0, 0), textcoords="offset points",
+                        ha="center", va="center", fontsize=9, fontweight="bold", color="#FFFFFF", zorder=4)
         else:
-            ax.annotate(c["bairro"], (c["lon"], c["lat"]), xytext=(6, -10), textcoords="offset points",
+            mp.annotate(c["bairro"], (c["lon"], c["lat"]), xytext=(6, -11), textcoords="offset points",
                         fontsize=7.5, color="#8A9BAE")
-    cb = fig.colorbar(sc, ax=ax, shrink=.7, pad=.02)
+    lons, lats = [t["cand"]["lon"] for t in tri], [t["cand"]["lat"] for t in tri]
+    mp.set_xlim(min(lons) - 0.1, max(lons) + 0.12)
+    mp.set_ylim(min(lats) - 0.05, max(lats) + 0.07)
+    cb = fig.colorbar(sc, ax=mp, shrink=.75, pad=.02)
     cb.set_label("redução do P90 na triagem (min)")
-    cb.ax.yaxis.set_tick_params(color="#8A9BAE")
-    cfg = exp["config"]
-    ctrl = exp["vs_controle"]["p90"]
-    ax.set_title(f"D · onde abrir a próxima base — +{cfg['extra']} ambulâncias, {len(cfg['seeds_final'])} seeds, 24 h
-"
-                 f"controle (+{cfg['extra']} em {cfg['controle_base']}): {ctrl['media'] / 60:+.1f} min "
-                 f"[{ctrl['baixo'] / 60:+.1f}, {ctrl['alto'] / 60:+.1f}]", loc="left", fontsize=10.5)
-    ax.set_xlabel("longitude")
-    ax.set_ylabel("latitude")
-    ax.set_aspect(1 / abs(__import__("math").cos(__import__("math").radians(-22.9))))
-    ax.legend(loc="lower left", fontsize=9)
+    mp.set_title("candidatas: bairros a > 5 km de qualquer base\ntamanho = demanda descoberta · anel = finalista",
+                 loc="left", fontsize=9.5)
+    mp.set_xlabel("longitude")
+    mp.set_ylabel("latitude")
+    mp.legend(loc="lower left", fontsize=8.5)
     fig.tight_layout()
     fig.savefig(saida / "d_expansao.png", dpi=150)
 
