@@ -8,6 +8,7 @@ from samu_sim.infra.fila import Fila
 from samu_sim.infra.repositorio import Repositorio
 
 ESPERA_MAX_REAL = 0.5  # dorme no maximo isso (em segundos reais) por vez para checar `parar`
+TOLERANCIA_ATRASO_SIM = 60.0  # chamados ate 1 min sim no passado ainda sao publicados
 
 
 class ServicoGerador:
@@ -20,8 +21,15 @@ class ServicoGerador:
         self._log = eventlog
 
     def executar(self, parar: threading.Event) -> int:
+        # chamados ja no passado (gerador subiu atrasado ou foi reiniciado no meio da
+        # rodada) sao descartados: publica-los inflaria a espera com atraso ficticio
+        agora = self._relogio.agora_sim()
+        pendentes = [c for c in self._chamados if c.criado_em >= agora - TOLERANCIA_ATRASO_SIM]
+        pulados = len(self._chamados) - len(pendentes)
+        if pulados:
+            self._log.registrar("chamados_pulados", quantidade=pulados, agora_sim=agora)
         publicados = 0
-        for c in self._chamados:
+        for c in pendentes:
             while not parar.is_set() and self._relogio.agora_sim() < c.criado_em:
                 resta_sim = c.criado_em - self._relogio.agora_sim()
                 self._relogio.dormir_sim(min(resta_sim, ESPERA_MAX_REAL * self._relogio.fator))

@@ -36,3 +36,17 @@ def test_para_quando_evento_setado():
     t.join(timeout=2)
     assert not t.is_alive()
     assert fila.tamanho() == 1  # so o primeiro (criado_em=0) saiu
+
+
+def test_pula_chamados_ja_no_passado_ao_iniciar():
+    """Gerador que sobe atrasado nao publica chamados com criado_em no passado
+    (inflaria o tempo de resposta com uma espera ficticia)."""
+    relogio = Relogio(fator=100000, inicio_sim=5000)
+    fila, repo = FilaMemoria(), RepositorioMemoria()
+    log = EventLogMemoria(relogio, "gerador")
+    svc = ServicoGerador([ch(1, 100), ch(2, 4900), ch(3, 5010), ch(4, 5020)], fila, repo, relogio, log)
+    n = svc.executar(threading.Event())
+    assert n == 2
+    assert [m.corpo["chamado_id"] for m in fila.receber()] == ["ch-3", "ch-4"]
+    assert log.contar("chamados_pulados") == 1
+    assert log.eventos[0]["quantidade"] == 2
