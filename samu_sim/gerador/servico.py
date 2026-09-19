@@ -1,7 +1,7 @@
 """Servico gerador: publica os chamados de um dia no ritmo do relogio simulado."""
 import threading
 
-from samu_sim.core.modelos import Chamado
+from samu_sim.core.modelos import PRIORIDADES, Chamado
 from samu_sim.core.relogio import Relogio
 from samu_sim.eventlog import EventLog
 from samu_sim.infra.fila import Fila
@@ -12,10 +12,11 @@ TOLERANCIA_ATRASO_SIM = 60.0  # chamados ate 1 min sim no passado ainda sao publ
 
 
 class ServicoGerador:
-    def __init__(self, chamados: list[Chamado], fila: Fila, repo: Repositorio,
+    def __init__(self, chamados: list[Chamado], filas: "Fila | dict[str, Fila]", repo: Repositorio,
                  relogio: Relogio, eventlog: EventLog):
         self._chamados = chamados
-        self._fila = fila
+        # uma fila por prioridade; uma Fila unica (testes/legado) serve para todas
+        self._filas = filas if isinstance(filas, dict) else {p: filas for p in PRIORIDADES}
         self._repo = repo
         self._relogio = relogio
         self._log = eventlog
@@ -36,8 +37,8 @@ class ServicoGerador:
             if parar.is_set():
                 break
             self._repo.salvar_chamado(c)
-            self._fila.publicar({
-                "chamado_id": c.id, "lat": c.lat, "lon": c.lon,
+            self._filas[c.prioridade].publicar({
+                "chamado_id": c.id, "lat": c.lat, "lon": c.lon, "prioridade": c.prioridade,
                 "bairro": c.bairro, "zona": c.zona, "criado_em": c.criado_em,
             })
             self._log.registrar("chamado_criado", chamado_id=c.id, bairro=c.bairro, zona=c.zona,

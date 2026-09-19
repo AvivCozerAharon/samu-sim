@@ -39,7 +39,7 @@ def configurar_logging(servico: str) -> None:
 @dataclass
 class Infra:
     repo: Repositorio
-    fila_chamados: Fila
+    fila_chamados: dict[str, Fila]  # por prioridade
     filas_eventos: dict[str, Fila]
     bases: dict[str, Base]
     bairros: list[Bairro]
@@ -55,7 +55,8 @@ def montar_infra(cfg: Config) -> Infra:
     filas_eventos = {f"w{k}": fila(cfg.fila_eventos(f"w{k}")) for k in range(cfg.n_workers)}
     dados = Path(cfg.dados_dir)
     bases = {b.id: b for b in carregar_bases(dados / "bases.csv")}
-    return Infra(repo, fila(cfg.fila_chamados), filas_eventos, bases, carregar_bairros(dados / "bairros.csv"))
+    filas_chamados = {p: fila(nome) for p, nome in cfg.filas_chamados().items()}
+    return Infra(repo, filas_chamados, filas_eventos, bases, carregar_bairros(dados / "bairros.csv"))
 
 
 def relogio_da_rodada(repo: Repositorio, agora_real=time.time, espera_max_seg: float = 60.0,

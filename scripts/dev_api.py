@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from samu_sim.ambulancia.servico import WorkerAmbulancia  # noqa: E402
 from samu_sim.api import criar_app  # noqa: E402
 from samu_sim.core.config import Config  # noqa: E402
-from samu_sim.core.modelos import Rodada  # noqa: E402
+from samu_sim.core.modelos import PRIORIDADES, Rodada  # noqa: E402
 from samu_sim.core.relogio import Relogio  # noqa: E402
 from samu_sim.core.runtime import SincronizadorRelogio, loop_servico  # noqa: E402
 from samu_sim.despachante.servico import Despachante  # noqa: E402
@@ -49,7 +49,7 @@ def main() -> None:
     bases = carregar_bases("dados/bases.csv")
     for amb in montar_frota(bases, a.ambulancias, 2):
         repo.salvar_ambulancia(amb)
-    fila = FilaMemoria(visibilidade_seg=5)
+    fila = {p: FilaMemoria(visibilidade_seg=5) for p in PRIORIDADES}
     filas_ev = {"w0": FilaMemoria(), "w1": FilaMemoria()}
     rot = criar_roteador(a.roteador, cfg)
     bases_por_id = {b.id: b for b in bases}

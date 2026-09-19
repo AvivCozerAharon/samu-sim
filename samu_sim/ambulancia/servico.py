@@ -115,7 +115,7 @@ class WorkerAmbulancia:
         chamado.chegada_em = agora
         self._repo.salvar_chamado(chamado)
         self._log.registrar("chegou", ambulancia_id=amb_id, chamado_id=ch_id, zona=chamado.zona,
-                            resposta_seg=agora - chamado.criado_em)
+                            prioridade=chamado.prioridade, resposta_seg=agora - chamado.criado_em)
 
         self._relogio.dormir_sim(self._rng.uniform(*self._atendimento))
 

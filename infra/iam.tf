@@ -17,7 +17,7 @@ resource "aws_iam_role" "ec2" {
 data "aws_iam_policy_document" "app" {
   statement {
     actions   = ["sqs:*"]
-    resources = concat([aws_sqs_queue.chamados.arn], [for q in aws_sqs_queue.eventos : q.arn])
+    resources = concat([for q in aws_sqs_queue.chamados : q.arn], [for q in aws_sqs_queue.eventos : q.arn])
   }
   # o bootstrap chama create_queue/get_queue_url (idempotentes) pelo nome
   statement {

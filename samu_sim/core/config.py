@@ -53,6 +53,12 @@ class Config:
                 valores[f.name] = bruto
         return cls(**valores)
 
+    PRIORIDADES = ("vermelho", "amarelo", "verde")  # ordem de atendimento
+
+    def filas_chamados(self) -> dict[str, str]:
+        """Uma fila SQS por prioridade: {"vermelho": "samu-chamados-vermelho", ...}."""
+        return {p: f"{self.fila_chamados}-{p}" for p in self.PRIORIDADES}
+
     def fila_eventos(self, worker_id: str) -> str:
         return f"{self.prefixo_fila_eventos}{worker_id}"
 

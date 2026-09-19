@@ -26,6 +26,7 @@ def _resumo(valores: list[float]) -> dict:
 def calcular(chamados: list[Chamado]) -> dict:
     respostas: list[float] = []
     por_zona: dict[str, list[float]] = defaultdict(list)
+    por_prioridade: dict[str, list[float]] = defaultdict(list)
     esperas: list[float] = []
     for c in chamados:
         if c.despachado_em is not None:
@@ -34,6 +35,7 @@ def calcular(chamados: list[Chamado]) -> dict:
             r = c.chegada_em - c.criado_em
             respostas.append(r)
             por_zona[c.zona].append(r)
+            por_prioridade[c.prioridade].append(r)
     return {
         "total": len(chamados),
         "atendidos": sum(1 for c in chamados if c.status == StatusChamado.ATENDIDO),
@@ -42,5 +44,7 @@ def calcular(chamados: list[Chamado]) -> dict:
         "resposta": _resumo(respostas),
         "por_zona": {z: {k: v for k, v in _resumo(vs).items() if k != "media"}
                      for z, vs in sorted(por_zona.items())},
+        "por_prioridade": {p: {k: v for k, v in _resumo(vs).items() if k != "media"}
+                           for p, vs in sorted(por_prioridade.items())},
         "espera_despacho": {"p50": percentil(esperas, 50), "p90": percentil(esperas, 90)},
     }

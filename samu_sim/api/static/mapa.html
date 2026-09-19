@@ -184,6 +184,7 @@
       <div class="kpis">
         <div class="kpi"><div class="v" id="p50">–</div><div class="l">mediana (P50)</div></div>
         <div class="kpi" id="kpiP90"><div class="v" id="p90">–</div><div class="l">P90</div></div>
+        <div class="kpi" id="kpiVerm"><div class="v" id="p90v" style="color:var(--cam)">–</div><div class="l">P90 vermelhos</div></div>
       </div>
       <div class="zonas" id="zonas"></div>
       <div class="legenda-meta"><s></s>meta de 15 min por zona (P90)</div>
@@ -463,6 +464,7 @@ async function metricas(){
   $('p50').textContent = minutos(m.resposta.p50); $('p90').textContent = minutos(m.resposta.p90);
   $('kpiP90').classList.toggle('alerta', m.resposta.p90 != null && m.resposta.p90 > META_SEG);
   $('nResp').textContent = m.resposta.n ? `${m.resposta.n} chegadas` : 'sem chegadas ainda';
+  const v = (m.por_prioridade || {}).vermelho; $('p90v').textContent = v ? minutos(v.p90) : '–';
   $('atend').textContent = m.atendidos; $('pend').textContent = m.fila.pendentes;
   $('espera').textContent = m.fila.pendentes ? minutos(m.fila.idade_max_seg) : '–';
   const escala = Math.max(META_SEG * 2, ...Object.values(m.por_zona).map(z => z.p90 || 0));

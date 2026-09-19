@@ -122,3 +122,27 @@ def test_despacho_grava_chegada_prevista():
     c = repo.obter_chamado("ch-1")
     ev = filas_ev["w0"].receber()[0].corpo
     assert c.chegada_prevista_em == c.despachado_em + ev["eta_seg"]
+
+
+# ---------- filas por prioridade (D7) ----------
+def test_vermelho_publicado_depois_e_despachado_antes_dos_verdes():
+    from samu_sim.core.modelos import PRIORIDADES
+    relogio = Relogio(fator=1)
+    repo = RepositorioMemoria()
+    repo.salvar_ambulancia(Ambulancia(id="amb-0", base_id="b", lat=-22.90, lon=-43.20, worker_id="w0"))
+    filas = {p: FilaMemoria(visibilidade_seg=0.01) for p in PRIORIDADES}
+    filas_ev = {"w0": FilaMemoria()}
+    log = EventLogMemoria(relogio, "despachante")
+    d = Despachante(filas, filas_ev, repo, MaisProxima(), RoteadorHaversine(), relogio, log, cache_seg=0)
+    for i in range(3):
+        c = Chamado(id=f"verde-{i}", lat=-22.9, lon=-43.2, bairro="B", zona="Sul", criado_em=0, prioridade="verde")
+        repo.salvar_chamado(c)
+        filas["verde"].publicar({"chamado_id": c.id, "prioridade": "verde"})
+    c = Chamado(id="vermelho-0", lat=-22.9, lon=-43.2, bairro="B", zona="Sul", criado_em=5, prioridade="vermelho")
+    repo.salvar_chamado(c)
+    filas["vermelho"].publicar({"chamado_id": c.id, "prioridade": "vermelho"})
+    assert d.processar_lote() == 1
+    assert repo.obter_chamado("vermelho-0").ambulancia_id == "amb-0"
+    assert all(repo.obter_chamado(f"verde-{i}").ambulancia_id is None for i in range(3))
+    assert d.processar_lote() == 0  # sem ambulancia: verdes ficam na fila (sem ack)
+    assert filas["verde"].tamanho() == 3
