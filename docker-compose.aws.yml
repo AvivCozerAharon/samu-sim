@@ -1,0 +1,60 @@
+# Compose para a EC2: sem LocalStack (SQS/DynamoDB reais via instance profile), sem OSRM
+# (roteador = matriz pre-computada). Uso na instancia:
+#   docker compose -f docker-compose.aws.yml --env-file .env up --build -d
+x-servico: &servico
+  build: .
+  restart: unless-stopped
+  environment: &env
+    AWS_REGION: ${AWS_REGION:-us-east-1}
+    AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+    N_WORKERS: "2"
+    LOG_DIR: /logs
+    FATOR: ${FATOR:-20}
+    POLITICA: ${POLITICA:-menor_eta}
+    ROTEADOR: ${ROTEADOR:-matriz}
+    N_AMBULANCIAS: ${N_AMBULANCIAS:-50}
+    CHAMADOS_POR_DIA: ${CHAMADOS_POR_DIA:-300}
+    SEED: ${SEED:-42}
+    RODADA_ID: ${RODADA_ID:-aws}
+    S3_BUCKET: ${S3_BUCKET:-}
+  volumes:
+    - ./logs:/logs
+  depends_on:
+    bootstrap:
+      condition: service_completed_successfully
+
+services:
+  bootstrap:
+    build: .
+    environment: *env
+    command: python -m samu_sim.infra.bootstrap
+
+  gerador:
+    <<: *servico
+    command: python -m samu_sim.gerador
+    restart: "no"
+
+  despachante:
+    <<: *servico
+    command: python -m samu_sim.despachante
+    deploy:
+      replicas: 2
+
+  ambulancia-w0:
+    <<: *servico
+    command: python -m samu_sim.ambulancia
+    environment:
+      <<: *env
+      WORKER_ID: w0
+
+  ambulancia-w1:
+    <<: *servico
+    command: python -m samu_sim.ambulancia
+    environment:
+      <<: *env
+      WORKER_ID: w1
+
+  api:
+    <<: *servico
+    command: python -m samu_sim.api
+    ports: ["8000:8000"]
