@@ -146,13 +146,53 @@ class RoteadorMatriz:
         return _etas_em_loop(self, origens, destino)
 
 
-def criar_roteador(nome: str, cfg=None, ao_falhar: Callable[[str], None] | None = None) -> Roteador:
+# Fator de transito por hora do dia sobre o tempo de via livre do OSRM. ESTIMATIVA: o TomTom
+# Traffic Index do Rio indica congestionamento de ~40-60 % nos picos; ver docs/calibracao.md.
+FATORES_TRANSITO: list[float] = [
+    1.00, 1.00, 1.00, 1.00, 1.00, 1.00,   # 0-5h
+    1.05, 1.25, 1.50, 1.50, 1.35, 1.30,   # 6-11h  pico da manha
+    1.30, 1.30, 1.30, 1.30, 1.40, 1.55,   # 12-17h
+    1.55, 1.55, 1.30, 1.30, 1.10, 1.05,   # 18-23h pico da tarde/noite
+]
+
+
+class RoteadorComTransito:
+    """Envolve outro roteador e multiplica o ETA pelo fator da hora simulada atual."""
+
+    def __init__(self, base: Roteador, hora_fn: Callable[[], float], fatores: list[float] | None = None):
+        self._base = base
+        self._hora = hora_fn  # devolve o tempo simulado (segundos)
+        self._fatores = fatores or FATORES_TRANSITO
+        self.nome = f"{base.nome}+transito"
+
+    @property
+    def fallbacks(self) -> int:
+        return getattr(self._base, "fallbacks", 0)
+
+    def fator_atual(self) -> float:
+        return self._fatores[int((self._hora() % 86400) // 3600)]
+
+    def eta(self, origem: Ponto, destino: Ponto) -> float:
+        return self._base.eta(origem, destino) * self.fator_atual()
+
+    def etas_de(self, origens: list[Ponto], destino: Ponto) -> list[float]:
+        f = self.fator_atual()
+        return [e * f for e in self._base.etas_de(origens, destino)]
+
+
+def criar_roteador(nome: str, cfg=None, ao_falhar: Callable[[str], None] | None = None,
+                   relogio=None) -> Roteador:
+    """`relogio` (com agora_sim) liga o fator de transito quando cfg.transito e True."""
     from samu_sim.core.config import Config  # import tardio: config nao depende de roteador
     cfg = cfg or Config()
     if nome == "haversine":
-        return RoteadorHaversine()
-    if nome == "osrm":
-        return RoteadorOSRM(cfg.osrm_url, RoteadorHaversine(), cfg.osrm_timeout_seg, ao_falhar=ao_falhar)
-    if nome == "matriz":
-        return RoteadorMatriz(cfg.matriz_path, RoteadorHaversine(), ao_falhar=ao_falhar)
-    raise ValueError(f"roteador desconhecido: {nome}")
+        r = RoteadorHaversine()
+    elif nome == "osrm":
+        r = RoteadorOSRM(cfg.osrm_url, RoteadorHaversine(), cfg.osrm_timeout_seg, ao_falhar=ao_falhar)
+    elif nome == "matriz":
+        r = RoteadorMatriz(cfg.matriz_path, RoteadorHaversine(), ao_falhar=ao_falhar)
+    else:
+        raise ValueError(f"roteador desconhecido: {nome}")
+    if getattr(cfg, "transito", False) and relogio is not None:
+        return RoteadorComTransito(r, relogio.agora_sim)
+    return r

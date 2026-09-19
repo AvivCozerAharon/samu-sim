@@ -21,7 +21,7 @@ def main() -> None:
     parar = threading.Event()
     instalar_sinais(parar)
     log = EventLogJsonl(cfg.log_dir, relogio, nome, cfg.rodada_id)
-    rot = criar_roteador(rodada.roteador, cfg,
+    rot = criar_roteador(rodada.roteador, cfg, relogio=relogio,
                          ao_falhar=lambda m: log.registrar("roteador_fallback", motivo=m))
     d = Despachante(infra.fila_chamados, infra.filas_eventos, infra.repo,
                     criar_politica(rodada.politica), rot, relogio, log)
