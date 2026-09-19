@@ -15,7 +15,7 @@ def montar():
     repo.salvar_ambulancia(Ambulancia(id="amb-1", base_id="b1", lat=-22.9, lon=-43.2, worker_id="w0"))
     repo.salvar_chamado(Chamado(id="ch-1", lat=1, lon=2, bairro="B", zona="Sul", criado_em=0.0))
     app = criar_app(repo, FilaMemoria(), {"b1": Base("b1", "B", -22.9, -43.2)}, relogio,
-                    EventLogMemoria(relogio, "api"), agora_real=lambda: t["v"])
+                    EventLogMemoria(relogio, "api"), agora_real=lambda: t["v"], intervalo_ws_seg=0.01)
     return TestClient(app), repo, relogio, t
 
 
@@ -57,3 +57,17 @@ def test_controle_pausa_e_despausa():
 def test_controle_rejeita_fator_negativo():
     c, *_ = montar()
     assert c.post("/controle", json={"fator": -1}).status_code == 422
+
+
+def test_mapa_na_raiz():
+    c, *_ = montar()
+    r = c.get("/")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "leaflet" in r.text.lower() and "/estado" in r.text
+
+
+def test_ws_estado_envia_snapshot():
+    c, repo, relogio, t = montar()
+    with c.websocket_connect("/ws/estado") as ws:
+        dados = ws.receive_json()
+    assert "ambulancias" in dados and dados["ambulancias"][0]["id"] == "amb-1"
