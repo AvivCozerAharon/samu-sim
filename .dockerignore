@@ -5,5 +5,6 @@ logs
 .pytest_cache
 __pycache__
 docs
+!docs/experimentos
 tests
 infra

@@ -71,7 +71,8 @@ class Controle(BaseModel):
 
 def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], relogio: Relogio,
               eventlog: EventLog, agora_real=time.time, reaper_timeout_seg: float = 120.0,
-              intervalo_ws_seg: float = 1.0, log_dir=None, rodada_id: str | None = None) -> FastAPI:
+              intervalo_ws_seg: float = 1.0, log_dir=None, rodada_id: str | None = None,
+              turnos_path=None) -> FastAPI:
     app = FastAPI(title="samu-sim")
     app.state.reaper = Reaper(repo, fila_chamados, bases, eventlog, reaper_timeout_seg, agora_real)
     app.state.relogio = relogio
@@ -148,6 +149,14 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
         dados_c = asdict(c) | {"status": str(c.status)}
         dados_a = (asdict(a) | {"status": str(a.status)}) if a else None
         return {"chamado": dados_c, "ambulancia": dados_a}
+
+    @app.get("/turnos")
+    def turnos():
+        """Trajetoria do otimizador de turnos (scripts/turnos.py), se existir."""
+        caminho = Path(turnos_path) if turnos_path else None
+        if caminho is None or not caminho.exists():
+            raise HTTPException(status_code=404, detail="sem turnos: rode scripts/turnos.py")
+        return json.loads(caminho.read_text(encoding="utf-8"))
 
     @app.get("/eventos")
     def eventos(desde: float = -1.0, limite: int = 100):

@@ -125,3 +125,13 @@ def test_chamado_por_id_com_ambulancia():
     r = c.get("/chamados/ch-1").json()
     assert r["chamado"]["id"] == "ch-1" and r["chamado"]["status"] == "despachado"
     assert r["ambulancia"]["id"] == "amb-1" and r["ambulancia"]["status"] == "reservada"
+
+
+def test_turnos_endpoint(tmp_path):
+    import json
+    c, repo, relogio, t = montar()
+    assert c.get("/turnos").status_code == 404
+    arq = tmp_path / "turnos.json"
+    arq.write_text(json.dumps({"J_inicial": 30, "J_final": 28, "turnos": []}), encoding="utf-8")
+    app = criar_app(repo, FilaMemoria(), {}, relogio, EventLogMemoria(relogio, "api"), turnos_path=arq)
+    assert TestClient(app).get("/turnos").json()["J_final"] == 28

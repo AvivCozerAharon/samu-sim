@@ -72,7 +72,8 @@ def main() -> None:
     for w in workers:
         threading.Thread(target=loop_servico, args=(w.processar_lote, parar, 0.05), daemon=True).start()
 
-    app = criar_app(repo, fila, bases_por_id, relogio, log("api"), log_dir=log_dir, rodada_id=rodada_id)
+    app = criar_app(repo, fila, bases_por_id, relogio, log("api"), log_dir=log_dir, rodada_id=rodada_id,
+                    turnos_path="docs/experimentos/turnos.json")
     print(f"samu-sim dev: http://localhost:{a.porta}/  (fator {a.fator}, {a.ambulancias} ambulancias, {a.politica}, {a.roteador})")
     uvicorn.run(app, host="127.0.0.1", port=a.porta, log_level="warning")
     parar.set()
