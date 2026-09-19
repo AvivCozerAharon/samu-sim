@@ -18,6 +18,8 @@ class StatusChamado(StrEnum):
     ATENDIDO = "atendido"
 
 
+PRIORIDADES = ("vermelho", "amarelo", "verde")  # ordem de atendimento (mais grave primeiro)
+
 TRANSICOES_VALIDAS: set[tuple[StatusAmbulancia, StatusAmbulancia]] = {
     (StatusAmbulancia.DISPONIVEL, StatusAmbulancia.RESERVADA),
     (StatusAmbulancia.RESERVADA, StatusAmbulancia.A_CAMINHO),

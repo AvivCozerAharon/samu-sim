@@ -35,3 +35,12 @@ def test_calcular():
     assert m["resposta"]["media"] == pytest.approx(800)
     assert m["por_zona"]["Sul"]["p50"] == 450 and m["por_zona"]["Oeste"]["n"] == 1
     assert m["espera_despacho"]["p50"] == 25
+
+
+def test_metricas_por_prioridade():
+    c1 = ch(1, "Sul", 0, chegada=300, despachado=10)
+    c1.prioridade = "vermelho"
+    c2 = ch(2, "Sul", 0, chegada=900, despachado=20)
+    c2.prioridade = "verde"
+    m = calcular([c1, c2])
+    assert m["por_prioridade"]["vermelho"]["p90"] == 300 and m["por_prioridade"]["verde"]["n"] == 1

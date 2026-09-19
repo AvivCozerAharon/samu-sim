@@ -2,7 +2,7 @@
 com lock otimista. Idempotente por chamado (mensagens duplicadas sao ignoradas)."""
 import time
 
-from samu_sim.core.modelos import Ambulancia, StatusAmbulancia, StatusChamado
+from samu_sim.core.modelos import PRIORIDADES, Ambulancia, StatusAmbulancia, StatusChamado
 from samu_sim.core.relogio import Relogio
 from samu_sim.eventlog import EventLog
 from samu_sim.infra.fila import Fila, Mensagem
@@ -12,11 +12,14 @@ from samu_sim.roteador import Roteador
 
 
 class Despachante:
-    def __init__(self, fila_chamados: Fila, filas_eventos: dict[str, Fila], repo: Repositorio,
+    def __init__(self, fila_chamados: "Fila | dict[str, Fila]", filas_eventos: dict[str, Fila], repo: Repositorio,
                  politica: Politica, roteador: Roteador, relogio: Relogio, eventlog: EventLog,
                  cache_seg: float = 2.0, agora_real=time.time):
         self._agora_real = agora_real
-        self._fila = fila_chamados
+        # filas por prioridade (vermelho -> amarelo -> verde); uma Fila unica serve para todas
+        self._filas = (fila_chamados if isinstance(fila_chamados, dict)
+                       else {p: fila_chamados for p in PRIORIDADES})
+        self._fila_atual: Fila = self._filas[PRIORIDADES[0]]
         self._filas_eventos = filas_eventos
         self._repo = repo
         self._politica = politica
@@ -27,7 +30,18 @@ class Despachante:
         self._cache: tuple[float, list[Ambulancia]] | None = None
 
     def processar_lote(self) -> int:
-        return sum(1 for msg in self._fila.receber() if self.processar(msg))
+        """So desce de nivel (vermelho -> amarelo -> verde) quando a fila acima esta vazia."""
+        vistas: set[int] = set()
+        for pri in PRIORIDADES:
+            fila = self._filas[pri]
+            if id(fila) in vistas:  # mesma Fila para varias prioridades (modo legado)
+                continue
+            vistas.add(id(fila))
+            msgs = fila.receber()
+            if msgs:
+                self._fila_atual = fila
+                return sum(1 for msg in msgs if self.processar(msg))
+        return 0
 
     def processar(self, msg: Mensagem) -> bool:
         chamado_id = msg.corpo["chamado_id"]
@@ -35,11 +49,11 @@ class Despachante:
         if chamado is None:
             # gerador salva antes de publicar; se nao existe, mensagem invalida -> descarta
             self._log.registrar("chamado_desconhecido", chamado_id=chamado_id)
-            self._fila.ack(msg)
+            self._fila_atual.ack(msg)
             return True
         if chamado.status != StatusChamado.PENDENTE:
             self._log.registrar("chamado_ja_despachado", chamado_id=chamado_id)
-            self._fila.ack(msg)
+            self._fila_atual.ack(msg)
             return True
 
         destino = (chamado.lat, chamado.lon)
@@ -66,9 +80,10 @@ class Despachante:
                 "ambulancia_id": reservada.id, "eta_seg": eta, "ts_sim": agora,
             })
             self._log.registrar("despachada", chamado_id=chamado_id, ambulancia_id=reservada.id,
-                                eta_seg=eta, espera_seg=agora - chamado.criado_em)
+                                eta_seg=eta, espera_seg=agora - chamado.criado_em,
+                                prioridade=chamado.prioridade, zona=chamado.zona)
             self._invalidar_cache()
-            self._fila.ack(msg)
+            self._fila_atual.ack(msg)
             return True
 
         # nenhuma candidata reservavel: nao da ack; a fila reentrega apos o visibility timeout

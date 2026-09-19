@@ -15,7 +15,7 @@ TABELAS = ("ambulancias", "chamados", "rodada")
 
 
 def _nomes_filas(cfg: Config) -> list[str]:
-    return [cfg.fila_chamados] + [cfg.fila_eventos(f"w{k}") for k in range(cfg.n_workers)]
+    return list(cfg.filas_chamados().values()) + [cfg.fila_eventos(f"w{k}") for k in range(cfg.n_workers)]
 
 
 def _criar_tabela(dynamo, nome: str) -> None:

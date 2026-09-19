@@ -11,7 +11,7 @@ from pathlib import Path
 from samu_sim.ambulancia.servico import WorkerAmbulancia
 from samu_sim.core.config import Config
 from samu_sim.core.metricas import calcular
-from samu_sim.core.modelos import Ambulancia, Base, Rodada
+from samu_sim.core.modelos import PRIORIDADES, Ambulancia, Base, Rodada
 from samu_sim.core.relogio import Relogio
 from samu_sim.despachante.servico import Despachante
 from samu_sim.eventlog import EventLogJsonl, EventLogMemoria
@@ -61,7 +61,7 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
         logs_mem.append(log)
         return log
 
-    fila_chamados = FilaMemoria(visibilidade_seg=visibilidade_seg)
+    fila_chamados = {p: FilaMemoria(visibilidade_seg=visibilidade_seg) for p in PRIORIDADES}
     filas_eventos = {f"w{k}": FilaMemoria(visibilidade_seg=visibilidade_seg) for k in range(n_workers)}
     rot = criar_roteador(roteador, cfg)
     bases_por_id = {b.id: b for b in bases}

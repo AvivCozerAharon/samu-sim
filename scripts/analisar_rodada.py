@@ -28,6 +28,7 @@ def analisar(eventos: list[dict]) -> dict:
     contagens = Counter(e["tipo"] for e in eventos)
     respostas, esperas = [], []
     por_zona = defaultdict(list)
+    por_prioridade = defaultdict(list)
     despachos = Counter()
     redespachados = set()  # chamados devolvidos a fila pelo reaper: 2o despacho e legitimo
     for e in eventos:
@@ -37,6 +38,8 @@ def analisar(eventos: list[dict]) -> dict:
         if t == "chegou":
             respostas.append(e["resposta_seg"])
             por_zona[e.get("zona", "?")].append(e["resposta_seg"])
+            if e.get("prioridade"):
+                por_prioridade[e["prioridade"]].append(e["resposta_seg"])
         elif t == "despachada":
             esperas.append(e["espera_seg"])
             despachos[e["chamado_id"]] += 1
@@ -44,6 +47,8 @@ def analisar(eventos: list[dict]) -> dict:
         "resposta": _resumo(respostas),
         "por_zona": {z: {k: v for k, v in _resumo(vs).items() if k != "media"}
                      for z, vs in sorted(por_zona.items())},
+        "por_prioridade": {p: {k: v for k, v in _resumo(vs).items() if k != "media"}
+                           for p, vs in sorted(por_prioridade.items())},
         "espera_despacho": {"p50": percentil(esperas, 50), "p90": percentil(esperas, 90)},
         "contagens": dict(contagens),
         "despachos_duplicados": sorted(c for c, n in despachos.items()
@@ -62,6 +67,8 @@ def imprimir(r: dict) -> None:
     print(f"chamados criados: {r['chamados_criados']}   atendidos: {r['chamados_atendidos']}")
     print(f"resposta         P50 {_min(r['resposta']['p50'])}   P90 {_min(r['resposta']['p90'])}   n={r['resposta']['n']}")
     print(f"espera despacho  P50 {_min(r['espera_despacho']['p50'])}   P90 {_min(r['espera_despacho']['p90'])}")
+    if r.get("por_prioridade"):
+        print("por prioridade:", "  ".join(f"{p}: P90 {_min(m['p90']).strip()} (n={m['n']})" for p, m in r["por_prioridade"].items()))
     print("por zona:")
     for z, m in r["por_zona"].items():
         print(f"  {z:8s} P50 {_min(m['p50'])}  P90 {_min(m['p90'])}  n={m['n']}")

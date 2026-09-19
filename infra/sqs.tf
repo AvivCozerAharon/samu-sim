@@ -1,5 +1,6 @@
 resource "aws_sqs_queue" "chamados" {
-  name                       = "samu-chamados"
+  for_each                   = toset(["vermelho", "amarelo", "verde"])
+  name                       = "samu-chamados-${each.key}"
   visibility_timeout_seconds = 30
   message_retention_seconds  = 3600
 }

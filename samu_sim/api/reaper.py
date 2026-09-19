@@ -2,17 +2,18 @@
 chamado (se nao atendido) para a fila. Roda periodicamente dentro da api."""
 import time
 
-from samu_sim.core.modelos import Base, StatusAmbulancia, StatusChamado
+from samu_sim.core.modelos import PRIORIDADES, Base, StatusAmbulancia, StatusChamado
 from samu_sim.eventlog import EventLog
 from samu_sim.infra.fila import Fila
 from samu_sim.infra.repositorio import ConflitoVersao, Repositorio
 
 
 class Reaper:
-    def __init__(self, repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base],
+    def __init__(self, repo: Repositorio, fila_chamados: "Fila | dict[str, Fila]", bases: dict[str, Base],
                  eventlog: EventLog, timeout_seg: float = 120.0, agora_real=time.time):
         self._repo = repo
-        self._fila = fila_chamados
+        self._filas = (fila_chamados if isinstance(fila_chamados, dict)
+                       else {p: fila_chamados for p in PRIORIDADES})
         self._bases = bases
         self._log = eventlog
         self._timeout = timeout_seg
@@ -48,5 +49,6 @@ class Reaper:
         c.despachado_em = None
         c.tentativas += 1
         self._repo.salvar_chamado(c)
-        self._fila.publicar({"chamado_id": c.id, "lat": c.lat, "lon": c.lon,
-                             "bairro": c.bairro, "zona": c.zona, "criado_em": c.criado_em})
+        self._filas[c.prioridade].publicar({"chamado_id": c.id, "lat": c.lat, "lon": c.lon,
+                                            "prioridade": c.prioridade, "bairro": c.bairro,
+                                            "zona": c.zona, "criado_em": c.criado_em})
