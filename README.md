@@ -26,16 +26,20 @@ uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memóri
 | `menor_eta` (malha viária) | 7,6 min | 16,0 min | 22 | **12** |
 | `menor_eta_cobertura` (não esvaziar base) | 8,9 min | 18,4 min | 24 | 15 |
 
-| B · frota (`menor_eta`) | 20 | 30 | 40 | 50 | **65** | 80 |
+| B · frota (`menor_eta`, com trânsito e reposicionamento) | 20 | 30 | 40 | 50 | **65** | 80 |
 |---|---|---|---|---|---|---|
-| P90 | 404 min | 406 | 223 | 127 | **17,9** | 15,0 |
-| na fila ao fim do dia | 1045 | 757 | 393 | 155 | 0 | 0 |
+| P90 | 312 min | 335 | 210 | 102 | **23,2** | 20,0 |
+| na fila ao fim do dia | 1005 | 653 | 382 | 68 | 0 | 0 |
+
+*(sem trânsito, D6: 65 → 17,9 min e 80 → 15,0 min; o trânsito de pico custa ~5 min de P90 em qualquer frota)*
 
 **Os insights:**
 
-- **A frota real está no lugar certo.** Com o ciclo completo (deslocamento + 20–30 min no local +
-  transporte ao hospital + entrega), 50 ambulâncias colapsam ao longo do dia (155 na fila) e o joelho
-  fica em ~65; o SAMU-RJ opera 73 — dentro da faixa estável, com P90 ≈ 16 min. Bater 15 min exige ~80.
+- **A frota real está no lugar certo — e a meta de 15 min não é atingível com ela.** Com o ciclo
+  completo (deslocamento + 20–30 min no local + transporte ao hospital + entrega) e trânsito de pico,
+  50 ambulâncias colapsam ao longo do dia e o joelho fica em ~65; o SAMU-RJ opera 73 — dentro da
+  faixa estável, com P90 ≈ 21 min. Nem 80 ambulâncias batem 15 min no P90 com trânsito; sem trânsito,
+  80 batem. Ou seja: o problema do P90 no Rio é mais via do que frota.
 - **A política paga na Zona Oeste.** Despachar pela linha reta custa 4 min de P90 lá (16 → 12 com a
   malha viária), porque o Maciço da Pedra Branca e a baía de Sepetiba tornam a "mais próxima" enganosa;
   no resto da cidade a diferença some. Em regime saturado (50 ambulâncias) a diferença era de 40 → 17 min.
@@ -45,6 +49,32 @@ uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memóri
 
 **Validação distribuída:** o mesmo cenário rodado na AWS — EC2 com 6 containers, SQS e DynamoDB
 reais — reproduziu o modelo em memória com < 2 % de diferença (`scripts/experimento_aws.sh`).
+
+## Realismo operacional (D8): o que cada correção do modelo mudou
+
+![realismo](docs/img/e_realismo.png)
+
+Três correções, medidas uma a uma na frota real de 73 (3 seeds, 24 h):
+
+| variante | P50 | P90 | P90 vermelhos |
+|---|---|---|---|
+| ambulância despachável ao liberar no hospital (sempre ligado) | 7,3 min | 15,4 min | 16,2 min |
+| + reposicionamento por previsão de demanda | 7,4 | 15,1 | 16,3 |
+| + trânsito por hora | 9,5 | 20,9 | 21,8 |
+| + ambos | 10,0 | 21,3 | 21,0 |
+
+- **Disponível ao liberar** (antes só voltava a ser despachável na base): P90 com 73 caiu de 16,0
+  para 15,4 min e o joelho da frota deslocou-se para baixo. Era o maior erro do modelo — ambulância
+  ociosa num hospital que fica exatamente onde a demanda está.
+- **Reposicionamento** (a ambulância liberada vai para a base de maior demanda prevista nas próximas
+  2 h relativa à cobertura, dentro de 8 km, e só se a pressão for ≥ 1,5× a da base atual): efeito
+  **neutro** (−0,3 min, dentro do ruído). A primeira versão, sem limiar e com raio de 15 km, *piorava*
+  1,3 min: o custo do deslocamento superava o ganho. Com 43 bases já bem distribuídas, sobra pouco
+  para reposicionar — o modelo de demanda é honesto (treinado só com `chamado_criado`, aprende os picos
+  de 12 h/19 h por zona), mas a decisão que ele alimenta não move o ponteiro aqui.
+- **Trânsito** (fator por hora sobre o tempo de via livre do OSRM, ≈ +50 % nos picos): +5,5 min de
+  P90. É a correção que mais muda a conclusão: com trânsito, a meta de 15 min fica fora de alcance
+  para qualquer frota testada.
 
 ## Prioridade e turnos que aprendem (D7)
 
@@ -95,9 +125,11 @@ defender em 35 minutos.
   em segundos; custa uma barreira de sincronização entre serviços.
 - **Fargate + ALB** no lugar da EC2 única; **WebSocket + React** no lugar do polling.
 - **Dados reais** do Data.Rio (bairros/UPAs/SAMU) no lugar dos 19 bairros e 10 bases-proxy.
-- **Machine learning sobre o event log**: previsão de demanda por zona × hora para
-  *reposicionar* ambulâncias livres ao longo do dia (a `Politica` é uma interface; uma `PoliticaML`
-  entra sem tocar no resto).
+- **Trânsito real** (COR/Waze por corredor e hora) no lugar do perfil estimado — é a variável que
+  mais muda a conclusão, e a menos calibrada.
+- **Reposicionamento com objetivo explícito** (cobertura garantida por zona, não pressão relativa) —
+  a versão atual é neutra; a próxima deveria ser avaliada com intervalo de confiança antes de qualquer
+  ajuste.
 - Experimento D: onde abrir 1 base nova na Barra/Jacarepaguá (o otimizador de turnos já mostrou que
   realocar não resolve a zona).
 
@@ -235,3 +267,4 @@ caminho → no local → concluído) com a câmera enquadrando. Estado também p
 - [x] D5: experimentos A (políticas) e B (frota), validação na AWS, gráficos
 - [x] D6: dados reais (Censo 2022, hospitais/UPAs, estatísticas do SAMU-RJ), gravidade, ciclo com hospital
 - [x] D7: filas por prioridade, otimizador de turnos (alocação por base), console de turnos
+- [x] D8: despachável ao liberar, previsão de demanda + reposicionamento, trânsito por hora (ablação medida)

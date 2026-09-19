@@ -17,6 +17,8 @@ x-servico: &servico
     SEED: ${SEED:-42}
     RODADA_ID: ${RODADA_ID:-aws}
     S3_BUCKET: ${S3_BUCKET:-}
+    REPOSICIONAMENTO: ${REPOSICIONAMENTO:-0}
+    TRANSITO: ${TRANSITO:-0}
   volumes:
     - ./logs:/logs
   depends_on:
