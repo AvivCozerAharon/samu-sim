@@ -1,11 +1,13 @@
 import logging
 import threading
+from pathlib import Path
 
 from samu_sim.ambulancia.servico import WorkerAmbulancia
 from samu_sim.core.config import Config
 from samu_sim.core.runtime import (SincronizadorRelogio, configurar_logging, instalar_sinais,
                                    loop_servico, montar_infra, relogio_da_rodada)
 from samu_sim.eventlog import EventLogJsonl, enviar_para_s3
+from samu_sim.previsao import ModeloDemanda, Reposicionador
 from samu_sim.roteador import criar_roteador
 
 
@@ -20,8 +22,13 @@ def main() -> None:
     instalar_sinais(parar)
     SincronizadorRelogio(relogio, infra.repo, cfg.sync_relogio_seg, parar).iniciar()
     log = EventLogJsonl(cfg.log_dir, relogio, nome, cfg.rodada_id)
+    reposicionador = None
+    if cfg.reposicionamento and Path(cfg.demanda_path).exists():
+        reposicionador = Reposicionador(ModeloDemanda.carregar(cfg.demanda_path), infra.bases, infra.bairros, infra.repo)
+        logging.info(f"reposicionamento ligado ({cfg.demanda_path})")
     w = WorkerAmbulancia(cfg.worker_id, infra.filas_eventos[cfg.worker_id], infra.repo, relogio,
-                         criar_roteador(rodada.roteador, cfg), infra.bases, log, seed=rodada.seed)
+                         criar_roteador(rodada.roteador, cfg), infra.bases, log, seed=rodada.seed,
+                         reposicionador=reposicionador)
     w.iniciar_heartbeat(cfg.heartbeat_seg, parar)
     logging.info(f"{nome}: pronto (heartbeat a cada {cfg.heartbeat_seg}s)")
     loop_servico(w.processar_lote, parar, ocioso_seg=0.0)

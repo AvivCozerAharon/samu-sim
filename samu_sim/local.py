@@ -21,6 +21,7 @@ from samu_sim.gerador.servico import ServicoGerador
 from samu_sim.infra.fila import FilaMemoria
 from samu_sim.infra.repositorio import RepositorioMemoria
 from samu_sim.politicas import criar_politica
+from samu_sim.previsao import ModeloDemanda, Reposicionador
 from samu_sim.roteador import criar_roteador
 
 INTERVALO_OCIOSO_REAL = 0.02
@@ -48,7 +49,8 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
           politica: str = "mais_proxima", roteador: str = "haversine", seed: int = 42,
           chamados_por_dia: int = 300, n_despachantes: int = 2, n_workers: int = 2,
           visibilidade_seg: float = 30.0, log_dir: str | None = None,
-          cfg: Config | None = None, alocacao: dict[str, int] | None = None) -> dict:
+          cfg: Config | None = None, alocacao: dict[str, int] | None = None,
+          reposicionamento: bool = False) -> dict:
     rodada_id = uuid.uuid4().hex[:8]
     relogio = Relogio(fator=fator)
     repo = RepositorioMemoria()
@@ -81,8 +83,15 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
     gerador = ServicoGerador(chamados, fila_chamados, repo, relogio, novo_log("gerador"))
     despachantes = [Despachante(fila_chamados, filas_eventos, repo, criar_politica(politica), rot,
                                 relogio, novo_log(f"despachante-{i}")) for i in range(n_despachantes)]
+    reposicionador = None
+    if reposicionamento:
+        caminho = Path((cfg or Config()).demanda_path)
+        if not caminho.exists():
+            raise FileNotFoundError(f"{caminho}: rode scripts/treinar_demanda.py")
+        reposicionador = Reposicionador(ModeloDemanda.carregar(caminho), bases_por_id, bairros, repo)
     workers = [WorkerAmbulancia(f"w{k}", filas_eventos[f"w{k}"], repo, relogio, rot, bases_por_id,
-                                novo_log(f"ambulancia-w{k}"), seed=seed) for k in range(n_workers)]
+                                novo_log(f"ambulancia-w{k}"), seed=seed, reposicionador=reposicionador)
+               for k in range(n_workers)]
 
     parar = threading.Event()
 
@@ -117,7 +126,8 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
                 eventos.update(json.loads(linha)["tipo"] for linha in f if linha.strip())
     return {
         "rodada": {"id": rodada_id, "fator": fator, "politica": politica, "roteador": roteador,
-                   "seed": seed, "n_ambulancias": n_ambulancias, "duracao_sim_seg": duracao_sim_seg},
+                   "seed": seed, "n_ambulancias": n_ambulancias, "duracao_sim_seg": duracao_sim_seg,
+                   "reposicionamento": reposicionamento},
         "metricas": calcular(repo.listar_chamados()),
         "eventos": dict(eventos),
         "roteador_fallbacks": getattr(rot, "fallbacks", 0),
@@ -140,10 +150,11 @@ def main() -> None:
     p.add_argument("--log-dir", default=None, help="grava event log JSONL nesta pasta")
     p.add_argument("--osrm-url", default="http://localhost:5000")
     p.add_argument("--matriz", default="dados/matriz_eta.json")
+    p.add_argument("--reposicionamento", action="store_true")
     a = p.parse_args()
     cfg = Config(osrm_url=a.osrm_url, matriz_path=a.matriz)
     r = rodar(a.fator, a.duracao_sim, a.ambulancias, a.politica, a.roteador, a.seed,
-              a.chamados_por_dia, log_dir=a.log_dir, cfg=cfg)
+              a.chamados_por_dia, log_dir=a.log_dir, cfg=cfg, reposicionamento=a.reposicionamento)
     print(json.dumps(r, indent=2, ensure_ascii=False))
 
 

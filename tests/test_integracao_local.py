@@ -35,3 +35,11 @@ def test_montar_frota_com_alocacao():
         montar_frota(bases, 6, 2, alocacao={"base-05": 3, "base-01": 2})
     with pytest.raises(ValueError, match="desconhecidas"):
         montar_frota(bases, 1, 2, alocacao={"base-99": 1})
+
+
+def test_reposicionamento_muda_base_de_ambulancias():
+    r = rodar(fator=20000, duracao_sim_seg=6 * 3600, n_ambulancias=40, chamados_por_dia=1000,
+              seed=7, visibilidade_seg=0.05, reposicionamento=True)
+    assert r["eventos"].get("reposicionada", 0) >= 1
+    assert r["eventos"].get("erro_ciclo", 0) == 0
+    assert r["rodada"]["reposicionamento"] is True

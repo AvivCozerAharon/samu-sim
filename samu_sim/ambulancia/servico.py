@@ -23,8 +23,10 @@ class WorkerAmbulancia:
                  roteador: Roteador, bases: dict[str, Base], eventlog: EventLog,
                  atendimento_seg: tuple[float, float] = (1200, 1800),
                  entrega_seg: tuple[float, float] = (480, 900),
-                 max_simultaneas: int = 50, seed: int = 0, agora_real=time.time):
+                 max_simultaneas: int = 50, seed: int = 0, agora_real=time.time,
+                 reposicionador=None):
         self.worker_id = worker_id
+        self._reposicionador = reposicionador  # None = volta sempre a base de origem
         self._agora_real = agora_real
         self._fila = fila_eventos
         self._repo = repo
@@ -148,8 +150,17 @@ class WorkerAmbulancia:
         chamado.status = StatusChamado.ATENDIDO
         self._repo.salvar_chamado(chamado)
         # ja e despachavel aqui (no hospital ou no local): o retorno a base e interrompivel
-        a = self._transicionar(amb_id, de, SA.DISPONIVEL, lat=posicao[0], lon=posicao[1], chamado_id=None)
+        campos = {"lat": posicao[0], "lon": posicao[1], "chamado_id": None}
+        explicacao = None
+        if self._reposicionador is not None:
+            atual = self._repo.obter_ambulancia(amb_id)
+            alvo, explicacao = self._reposicionador.escolher_base(posicao, agora, atual.base_id)
+            if alvo.id != atual.base_id:
+                campos["base_id"] = alvo.id
+        a = self._transicionar(amb_id, de, SA.DISPONIVEL, **campos)
         self._log.registrar("liberada", ambulancia_id=amb_id, chamado_id=ch_id)
+        if explicacao is not None and "base_id" in campos:
+            self._log.registrar("reposicionada", ambulancia_id=amb_id, base_id=a.base_id, **explicacao)
         self._retornar(amb_id, posicao, self._bases[a.base_id])
 
     def _retornar(self, amb_id: str, origem, base: Base) -> None:
