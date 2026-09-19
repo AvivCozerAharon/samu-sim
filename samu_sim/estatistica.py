@@ -31,10 +31,11 @@ def ic_bootstrap(valores, nivel: float = 0.95, n_reamostras: int = 2000, seed: i
 
 
 def diferenca_pareada(a, b, nivel: float = 0.95, n_reamostras: int = 2000, seed: int = 0) -> dict:
-    """IC de (b - a) pareado por posicao (mesma seed). Pares com None sao descartados."""
+    """IC de (b - a) pareado por posicao (mesma seed). Pares com None sao descartados.
+    "Significativo" exige >= 3 pares: com 2 o bootstrap nao tem como discordar de si mesmo."""
     if len(a) != len(b):
         raise ValueError(f"listas de tamanhos diferentes: {len(a)} e {len(b)}")
     difs = [float(y) - float(x) for x, y in zip(a, b) if x is not None and y is not None]
     r = ic_bootstrap(difs, nivel, n_reamostras, seed)
-    r["significativo"] = bool(r["n"] >= 2 and (r["alto"] < 0 or r["baixo"] > 0))
+    r["significativo"] = bool(r["n"] >= 3 and (r["alto"] < 0 or r["baixo"] > 0))
     return r
