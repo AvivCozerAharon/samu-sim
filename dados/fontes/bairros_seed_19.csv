@@ -1,0 +1,20 @@
+bairro,zona,lat,lon,populacao
+Centro,Centro,-22.9068,-43.1829,41142
+Copacabana,Sul,-22.9711,-43.1822,146392
+Botafogo,Sul,-22.9519,-43.1846,82890
+Flamengo,Sul,-22.9330,-43.1760,50043
+Tijuca,Norte,-22.9251,-43.2372,163805
+Vila Isabel,Norte,-22.9150,-43.2500,86018
+Meier,Norte,-22.9026,-43.2790,49828
+Madureira,Norte,-22.8731,-43.3371,50106
+Iraja,Norte,-22.8330,-43.3280,96382
+Penha,Norte,-22.8394,-43.2790,78678
+Ilha do Governador,Norte,-22.8060,-43.1900,105000
+Barra da Tijuca,Barra,-23.0003,-43.3651,135924
+Jacarepagua,Barra,-22.9530,-43.3840,157000
+Recreio dos Bandeirantes,Barra,-23.0203,-43.4720,82240
+Realengo,Oeste,-22.8790,-43.4340,180123
+Bangu,Oeste,-22.8792,-43.4650,243125
+Campo Grande,Oeste,-22.9036,-43.5590,328370
+Santa Cruz,Oeste,-22.9186,-43.6845,217333
+Guaratiba,Oeste,-23.0130,-43.5960,110049

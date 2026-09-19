@@ -25,11 +25,17 @@ class Bairro:
     lat: float
     lon: float
     populacao: int
+    fator_demanda: float = 1.0  # multiplicador sobre a populacao (ex.: Centro, populacao flutuante)
+
+    @property
+    def peso(self) -> float:
+        return self.populacao * self.fator_demanda
 
 
 def carregar_bairros(caminho: str | Path) -> list[Bairro]:
     with open(caminho, encoding="utf-8", newline="") as f:
-        return [Bairro(r["bairro"], r["zona"], float(r["lat"]), float(r["lon"]), int(r["populacao"]))
+        return [Bairro(r["bairro"], r["zona"], float(r["lat"]), float(r["lon"]), int(r["populacao"]),
+                       float(r.get("fator_demanda") or 1.0))
                 for r in csv.DictReader(f)]
 
 
@@ -43,7 +49,7 @@ class GeradorChamados:
     def __init__(self, bairros: list[Bairro], seed: int,
                  chamados_por_dia: int = 300, raio_km: float = 1.5):
         self._bairros = bairros
-        self._pesos_bairro = [b.populacao for b in bairros]
+        self._pesos_bairro = [b.peso for b in bairros]
         self._seed = seed
         self._n = chamados_por_dia
         self._raio = raio_km

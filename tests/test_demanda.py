@@ -6,7 +6,7 @@ from samu_sim.gerador.demanda import carregar_bairros, carregar_bases, GeradorCh
 def test_carrega_csvs():
     bairros = carregar_bairros("dados/bairros.csv")
     bases = carregar_bases("dados/bases.csv")
-    assert len(bairros) == 19 and len(bases) == 10
+    assert len(bairros) >= 19 and len(bases) >= 10
     assert {b.zona for b in bairros} == {"Centro", "Sul", "Norte", "Oeste", "Barra"}
     assert bases[0].id == "base-01"
 

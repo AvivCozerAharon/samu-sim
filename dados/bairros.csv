@@ -1,20 +1,166 @@
-bairro,zona,lat,lon,populacao
-Centro,Centro,-22.9068,-43.1829,41142
-Copacabana,Sul,-22.9711,-43.1822,146392
-Botafogo,Sul,-22.9519,-43.1846,82890
-Flamengo,Sul,-22.9330,-43.1760,50043
-Tijuca,Norte,-22.9251,-43.2372,163805
-Vila Isabel,Norte,-22.9150,-43.2500,86018
-Meier,Norte,-22.9026,-43.2790,49828
-Madureira,Norte,-22.8731,-43.3371,50106
-Iraja,Norte,-22.8330,-43.3280,96382
-Penha,Norte,-22.8394,-43.2790,78678
-Ilha do Governador,Norte,-22.8060,-43.1900,105000
-Barra da Tijuca,Barra,-23.0003,-43.3651,135924
-Jacarepagua,Barra,-22.9530,-43.3840,157000
-Recreio dos Bandeirantes,Barra,-23.0203,-43.4720,82240
-Realengo,Oeste,-22.8790,-43.4340,180123
-Bangu,Oeste,-22.8792,-43.4650,243125
-Campo Grande,Oeste,-22.9036,-43.5590,328370
-Santa Cruz,Oeste,-22.9186,-43.6845,217333
-Guaratiba,Oeste,-23.0130,-43.5960,110049
+bairro,zona,regiao_adm,lat,lon,populacao,populacao_2010,fator_demanda
+Abolicao,Norte,Meier,-22.88601,-43.29936,9196,11356,1.0
+Acari,Norte,Pavuna,-22.82212,-43.34101,29673,27347,1.0
+Agua Santa,Norte,Meier,-22.91115,-43.31157,6419,8756,1.0
+Alto da Boa Vista,Norte,Tijuca,-22.96063,-43.26071,9831,9343,1.0
+Anchieta,Norte,Anchieta,-22.82391,-43.39971,52095,55652,1.0
+Andarai,Norte,Vila Isabel,-22.92894,-43.25351,34576,39365,1.0
+Anil,Barra,Jacarepagua,-22.95699,-43.33823,31895,24172,1.0
+Bancarios,Norte,Ilha Do Governador,-22.79237,-43.18115,11062,12512,1.0
+Bangu,Oeste,Bangu,-22.85845,-43.48541,211912,218089,1.0
+Barra Olimpica,Barra,Barra Da Tijuca,-22.97174,-43.38505,56547,23425,1.0
+Barra da Tijuca,Barra,Barra Da Tijuca,-22.9995,-43.37222,142263,127159,1.0
+Barra de Guaratiba,Oeste,Guaratiba,-23.0386,-43.55034,4755,3577,1.0
+Barros Filho,Norte,Pavuna,-22.83493,-43.36429,20444,14049,1.0
+Benfica,Centro,Sao Cristovao,-22.89233,-43.2403,21388,25081,1.0
+Bento Ribeiro,Norte,Madureira,-22.8673,-43.36075,37306,43707,1.0
+Bonsucesso,Norte,Ramos,-22.86593,-43.25377,16872,18711,1.0
+Botafogo,Sul,Botafogo,-22.95232,-43.1861,77018,82890,1.0
+Bras de Pina,Norte,Penha,-22.83112,-43.29737,45048,59222,1.0
+Cachambi,Norte,Meier,-22.88987,-43.2743,38673,42415,1.0
+Cacuia,Norte,Ilha Do Governador,-22.82207,-43.184,10392,11013,1.0
+Caju,Centro,Portuaria,-22.87905,-43.22173,24116,20477,1.0
+Camorim,Barra,Barra Da Tijuca,-22.96916,-43.43319,1383,1196,1.0
+Campinho,Norte,Madureira,-22.88505,-43.3474,8579,10156,1.0
+Campo Grande,Oeste,Campo Grande,-22.89175,-43.55287,352704,328370,1.0
+Campo dos Afonsos,Oeste,Realengo,-22.87844,-43.38332,2106,1365,1.0
+Cascadura,Norte,Madureira,-22.88503,-43.32995,26895,34456,1.0
+Catete,Sul,Botafogo,-22.9266,-43.18013,22295,24057,1.0
+Catumbi,Centro,Rio Comprido,-22.91952,-43.19728,12201,12556,1.0
+Cavalcanti,Norte,Madureira,-22.87074,-43.31678,13799,16141,1.0
+Centro,Centro,Centro,-22.90655,-43.17869,23642,29555,9.5
+Cidade Nova,Centro,Rio Comprido,-22.9101,-43.20151,4745,5466,1.0
+Cidade Universitaria,Norte,Ilha Do Governador,-22.85397,-43.22836,1303,1556,1.0
+Cidade de Deus,Barra,Cidade De Deus,-22.9481,-43.36286,30576,36515,1.0
+Cocota,Norte,Ilha Do Governador,-22.80434,-43.18062,5021,4877,1.0
+Coelho Neto,Norte,Pavuna,-22.83212,-43.35055,26780,32423,1.0
+Colegio,Norte,Iraja,-22.83938,-43.33616,26840,29245,1.0
+Complexo do Alemao,Norte,Complexo Do Alemao,-22.86136,-43.27368,54202,69143,1.0
+Copacabana,Sul,Copacabana,-22.97062,-43.18748,128919,146392,1.0
+Cordovil,Norte,Vigario Geral,-22.81907,-43.29286,34668,45202,1.0
+Cosme Velho,Sul,Botafogo,-22.94152,-43.20062,6408,7178,1.0
+Cosmos,Oeste,Campo Grande,-22.90812,-43.61294,95484,77007,1.0
+Costa Barros,Norte,Pavuna,-22.82501,-43.37011,26272,28442,1.0
+Curicica,Barra,Jacarepagua,-22.95231,-43.38725,29109,31189,1.0
+Del Castilho,Norte,Inhauma,-22.87976,-43.27225,20597,15610,1.0
+Deodoro,Oeste,Realengo,-22.85148,-43.38639,10402,10842,1.0
+Encantado,Norte,Meier,-22.89699,-43.30423,12405,15021,1.0
+Engenheiro Leal,Norte,Madureira,-22.87453,-43.3255,5200,6113,1.0
+Engenho Novo,Norte,Meier,-22.90904,-43.26857,39424,42172,1.0
+Engenho da Rainha,Norte,Inhauma,-22.86303,-43.29429,24188,26659,1.0
+Engenho de Dentro,Norte,Meier,-22.9024,-43.29616,43175,45540,1.0
+Estacio,Centro,Rio Comprido,-22.91686,-43.2044,23260,17189,1.0
+Flamengo,Sul,Botafogo,-22.93467,-43.17423,43099,50043,1.0
+Freguesia (Ilha),Norte,Ilha Do Governador,-22.78575,-43.17016,15900,19437,1.0
+Freguesia (Jacarepagua),Barra,Jacarepagua,-22.93216,-43.33896,74803,70511,1.0
+Galeao,Norte,Ilha Do Governador,-22.8078,-43.23647,20816,22971,1.0
+Gamboa,Centro,Portuaria,-22.89754,-43.19291,11416,13108,1.0
+Gardenia Azul,Barra,Jacarepagua,-22.95871,-43.35103,20490,17715,1.0
+Gavea,Sul,Lagoa,-22.97991,-43.23895,14176,16003,1.0
+Gericino,Oeste,Bangu,-22.84311,-43.47865,20690,15167,1.0
+Gloria,Sul,Botafogo,-22.91909,-43.17331,7120,9661,1.0
+Grajau,Norte,Vila Isabel,-22.92934,-43.27011,32816,38671,1.0
+Grumari,Barra,Barra Da Tijuca,-23.04643,-43.53149,184,167,1.0
+Guadalupe,Norte,Anchieta,-22.83893,-43.37549,41088,47144,1.0
+Guaratiba,Oeste,Guaratiba,-22.99221,-43.58942,154125,107369,1.0
+Higienopolis,Norte,Inhauma,-22.87379,-43.26179,14227,15734,1.0
+Honorio Gurgel,Norte,Madureira,-22.84726,-43.35653,18213,21989,1.0
+Humaita,Sul,Botafogo,-22.95491,-43.20104,13044,13285,1.0
+Ilha de Guaratiba,Oeste,Guaratiba,-22.99665,-43.56218,6099,3580,1.0
+Inhauma,Norte,Inhauma,-22.87192,-43.28193,37233,45698,1.0
+Inhoaiba,Oeste,Campo Grande,-22.91157,-43.59395,72141,64649,1.0
+Ipanema,Sul,Lagoa,-22.98411,-43.20313,37392,42743,1.0
+Iraja,Norte,Iraja,-22.83501,-43.32606,85906,96382,1.0
+Itanhanga,Barra,Barra Da Tijuca,-22.98593,-43.31005,67969,38415,1.0
+Jabour,Oeste,Bangu,-22.88092,-43.4933,5287,5346,1.0
+Jacare,Norte,Meier,-22.89288,-43.25729,8198,9276,1.0
+Jacarepagua,Barra,Jacarepagua,-22.93735,-43.42548,175943,143440,1.0
+Jacarezinho,Norte,Jacarezinho,-22.88749,-43.25774,35348,37839,1.0
+Jardim America,Norte,Vigario Geral,-22.81012,-43.32336,20687,25226,1.0
+Jardim Botanico,Sul,Lagoa,-22.96454,-43.22425,15871,18009,1.0
+Jardim Carioca,Norte,Ilha Do Governador,-22.80567,-43.19307,20374,24848,1.0
+Jardim Guanabara,Norte,Ilha Do Governador,-22.81291,-43.20222,27084,32213,1.0
+Jardim Sulacap,Oeste,Realengo,-22.89589,-43.39405,14396,13062,1.0
+Joa,Barra,Barra Da Tijuca,-23.00787,-43.28713,983,818,1.0
+Lagoa,Sul,Lagoa,-22.97111,-43.20918,18676,21198,1.0
+Lapa,Centro,Centro,-22.91331,-43.18111,9116,11587,1.0
+Laranjeiras,Sul,Botafogo,-22.93537,-43.1886,39692,45554,1.0
+Leblon,Sul,Lagoa,-22.98373,-43.22521,37709,46044,1.0
+Leme,Sul,Copacabana,-22.96204,-43.16723,12479,14799,1.0
+Lins de Vasconcelos,Norte,Meier,-22.91428,-43.28484,30228,37487,1.0
+Madureira,Norte,Madureira,-22.87237,-43.33658,39712,50106,1.0
+Magalhaes Bastos,Oeste,Realengo,-22.87247,-43.4137,20938,24430,1.0
+Mangueira,Centro,Sao Cristovao,-22.904,-43.23649,18247,17835,1.0
+Manguinhos,Norte,Ramos,-22.88064,-43.24582,28855,36160,1.0
+Maracana,Norte,Vila Isabel,-22.91314,-43.22869,23498,25256,1.0
+Mare,Norte,Complexo Da Mare,-22.85968,-43.24248,124832,129770,1.0
+Marechal Hermes,Norte,Madureira,-22.85916,-43.37067,41507,48061,1.0
+Maria da Graca,Norte,Inhauma,-22.88309,-43.26386,7209,7972,1.0
+Meier,Norte,Meier,-22.90259,-43.28195,39700,49828,1.0
+Monero,Norte,Ilha Do Governador,-22.79639,-43.19758,5723,6476,1.0
+Olaria,Norte,Ramos,-22.8476,-43.27001,51222,57514,1.0
+Osvaldo Cruz,Norte,Madureira,-22.87148,-43.3508,29995,34040,1.0
+Paciencia,Oeste,Santa Cruz,-22.89355,-43.63881,104884,94626,1.0
+Padre Miguel,Oeste,Bangu,-22.87899,-43.44959,61254,64228,1.0
+Paqueta,Centro,Paqueta,-22.75963,-43.10804,3486,3361,0.0
+Parada de Lucas,Norte,Vigario Geral,-22.81574,-43.30094,22069,23923,1.0
+Parque Anchieta,Norte,Anchieta,-22.83622,-43.41522,21833,26212,1.0
+Parque Columbia,Norte,Pavuna,-22.81415,-43.34191,8222,9202,1.0
+Pavuna,Norte,Pavuna,-22.81272,-43.36003,95337,97350,1.0
+Pechincha,Barra,Jacarepagua,-22.9296,-43.35372,39070,34709,1.0
+Pedra de Guaratiba,Oeste,Guaratiba,-22.99822,-43.63776,11950,9488,1.0
+Penha,Norte,Penha,-22.83779,-43.27603,58516,78678,1.0
+Penha Circular,Norte,Penha,-22.83149,-43.28599,36725,47816,1.0
+Piedade,Norte,Meier,-22.89373,-43.31245,38712,43378,1.0
+Pilares,Norte,Meier,-22.87917,-43.29581,23518,27250,1.0
+Pitangueiras,Norte,Ilha Do Governador,-22.81694,-43.18,10242,11756,1.0
+Portuguesa,Norte,Ilha Do Governador,-22.79985,-43.20714,19831,23856,1.0
+Praca Seca,Barra,Jacarepagua,-22.89988,-43.35239,63284,64147,1.0
+Praca da Bandeira,Norte,Tijuca,-22.91093,-43.21332,7215,8662,1.0
+Praia da Bandeira,Norte,Ilha Do Governador,-22.81046,-43.17978,5153,5948,1.0
+Quintino Bocaiuva,Norte,Madureira,-22.89521,-43.32478,24740,31185,1.0
+Ramos,Norte,Ramos,-22.85214,-43.25635,34453,40792,1.0
+Realengo,Oeste,Realengo,-22.88098,-43.43369,165881,180123,1.0
+Recreio dos Bandeirantes,Barra,Barra Da Tijuca,-23.01515,-43.48088,141316,82240,1.0
+Riachuelo,Norte,Meier,-22.90302,-43.25528,10514,12653,1.0
+Ribeira,Norte,Ilha Do Governador,-22.82507,-43.17033,3474,3528,1.0
+Ricardo de Albuquerque,Norte,Anchieta,-22.83741,-43.39708,27704,29310,1.0
+Rio Comprido,Centro,Rio Comprido,-22.92874,-43.20896,39890,43764,1.0
+Rocha,Norte,Meier,-22.8996,-43.24897,15900,8766,1.0
+Rocha Miranda,Norte,Madureira,-22.84993,-43.34644,36360,44188,1.0
+Rocinha,Sul,Rocinha,-22.98888,-43.24859,70894,69356,1.0
+Sampaio,Norte,Meier,-22.90239,-43.26035,8832,10895,1.0
+Santa Cruz,Oeste,Santa Cruz,-22.91649,-43.70642,249130,217333,1.0
+Santa Teresa,Centro,Santa Tereza,-22.93252,-43.19947,36252,40926,1.0
+Santissimo,Oeste,Campo Grande,-22.87447,-43.52037,48187,41458,1.0
+Santo Cristo,Centro,Portuaria,-22.90087,-43.20372,9936,12330,1.0
+Sao Conrado,Sul,Lagoa,-22.99184,-43.26851,9739,10980,1.0
+Sao Cristovao,Centro,Sao Cristovao,-22.90036,-43.22249,27911,26510,1.0
+Sao Francisco Xavier,Norte,Meier,-22.90417,-43.24317,6340,8343,1.0
+Saude,Centro,Portuaria,-22.89733,-43.18442,1876,2749,1.0
+Senador Camara,Oeste,Bangu,-22.89685,-43.48986,101980,100169,1.0
+Senador Vasconcelos,Oeste,Campo Grande,-22.89447,-43.53009,32765,30600,1.0
+Sepetiba,Oeste,Santa Cruz,-22.96813,-43.69357,58738,56575,1.0
+Tanque,Barra,Jacarepagua,-22.91345,-43.35818,36815,37856,1.0
+Taquara,Barra,Jacarepagua,-22.92172,-43.38462,107188,102126,1.0
+Taua,Norte,Ilha Do Governador,-22.79768,-43.18672,26482,29567,1.0
+Tijuca,Norte,Tijuca,-22.93302,-43.23885,142326,163805,1.0
+Todos os Santos,Norte,Meier,-22.89492,-43.2851,22593,24646,1.0
+Tomas Coelho,Norte,Inhauma,-22.86715,-43.30594,20343,22676,1.0
+Turiacu,Norte,Madureira,-22.86179,-43.34216,11613,17246,1.0
+Urca,Sul,Botafogo,-22.95053,-43.16181,5215,7061,1.0
+Vargem Grande,Barra,Barra Da Tijuca,-22.97177,-43.49192,20663,14039,1.0
+Vargem Pequena,Barra,Barra Da Tijuca,-22.98246,-43.4586,31115,27250,1.0
+Vasco da Gama,Centro,Sao Cristovao,-22.89151,-43.22674,14576,15482,1.0
+Vaz Lobo,Norte,Madureira,-22.85866,-43.32835,10995,15167,1.0
+Vicente de Carvalho,Norte,Iraja,-22.85723,-43.31567,21300,24964,1.0
+Vidigal,Sul,Lagoa,-22.99473,-43.24009,15112,12797,1.0
+Vigario Geral,Norte,Vigario Geral,-22.80905,-43.31022,34202,41820,1.0
+Vila Isabel,Norte,Vila Isabel,-22.91545,-43.24762,65790,86018,1.0
+Vila Kennedy,Oeste,Bangu,-22.85668,-43.48796,21579,25036,1.0
+Vila Kosmos,Norte,Iraja,-22.85408,-43.30363,14878,18274,1.0
+Vila Militar,Oeste,Realengo,-22.8615,-43.40329,12956,13184,1.0
+Vila Valqueire,Barra,Jacarepagua,-22.88814,-43.36718,34024,32279,1.0
+Vila da Penha,Norte,Iraja,-22.84336,-43.31009,21950,25465,1.0
+Vista Alegre,Norte,Iraja,-22.83018,-43.3152,7059,8622,1.0
+Zumbi,Norte,Ilha Do Governador,-22.82105,-43.17604,1817,2016,1.0
