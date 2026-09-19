@@ -1,5 +1,6 @@
 """Cria filas SQS e tabelas DynamoDB (LocalStack ou AWS) e semeia frota + rodada.
 Uso: python -m samu_sim.infra.bootstrap"""
+import json
 import time
 from pathlib import Path
 
@@ -39,6 +40,17 @@ def _apagar_tabela(dynamo, nome: str) -> None:
             raise
 
 
+def carregar_alocacao(caminho: Path, n_ambulancias: int) -> dict[str, int] | None:
+    """dados/alocacao.json (gerado pelo otimizador de turnos). Ignorado se a soma nao bater."""
+    if not caminho.exists():
+        return None
+    alocacao = {k: int(v) for k, v in json.loads(caminho.read_text(encoding="utf-8")).items()}
+    if sum(alocacao.values()) != n_ambulancias:
+        print(f"alocacao.json soma {sum(alocacao.values())} != N_AMBULANCIAS={n_ambulancias}; usando round-robin")
+        return None
+    return alocacao
+
+
 def criar_recursos(cfg: Config) -> None:
     sqs, dynamo = cliente_sqs(cfg), recurso_dynamo(cfg)
     for nome in _nomes_filas(cfg):
@@ -72,10 +84,12 @@ def semear(cfg: Config, repo: RepositorioDynamo | None = None, agora_real=time.t
                 raise
     repo = repo or RepositorioDynamo(dynamo, cfg)
     bases = carregar_bases(Path(cfg.dados_dir) / "bases.csv")
-    for a in montar_frota(bases, cfg.n_ambulancias, cfg.n_workers):
+    alocacao = carregar_alocacao(Path(cfg.dados_dir) / "alocacao.json", cfg.n_ambulancias)
+    for a in montar_frota(bases, cfg.n_ambulancias, cfg.n_workers, alocacao):
         repo.salvar_ambulancia(a)
     rodada = Rodada(RODADA_ID, cfg.seed, cfg.politica, cfg.fator, cfg.n_ambulancias, cfg.roteador,
-                    inicio_real=agora_real(), inicio_sim=0.0)
+                    inicio_real=agora_real(), inicio_sim=0.0,
+                    alocacao=json.dumps(alocacao) if alocacao else None)
     repo.salvar_rodada(rodada)
     return rodada
 

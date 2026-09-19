@@ -6,6 +6,7 @@ import threading
 import time
 import uuid
 from collections import Counter
+from dataclasses import asdict
 from pathlib import Path
 
 from samu_sim.ambulancia.servico import WorkerAmbulancia
@@ -25,20 +26,29 @@ from samu_sim.roteador import criar_roteador
 INTERVALO_OCIOSO_REAL = 0.02
 
 
-def montar_frota(bases: list[Base], n_ambulancias: int, n_workers: int) -> list[Ambulancia]:
-    frota = []
-    for i in range(n_ambulancias):
-        b = bases[i % len(bases)]
-        frota.append(Ambulancia(id=f"amb-{i:03d}", base_id=b.id, lat=b.lat, lon=b.lon,
-                                worker_id=f"w{i % n_workers}"))
-    return frota
+def montar_frota(bases: list[Base], n_ambulancias: int, n_workers: int,
+                 alocacao: dict[str, int] | None = None) -> list[Ambulancia]:
+    """Sem alocacao: round-robin pelas bases. Com alocacao {base_id: n}: exatamente n por base
+    (a soma tem que ser n_ambulancias)."""
+    por_id = {b.id: b for b in bases}
+    if alocacao:
+        desconhecidas = set(alocacao) - set(por_id)
+        if desconhecidas:
+            raise ValueError(f"alocacao com bases desconhecidas: {sorted(desconhecidas)}")
+        if sum(alocacao.values()) != n_ambulancias:
+            raise ValueError(f"alocacao soma {sum(alocacao.values())}, esperado {n_ambulancias}")
+        sequencia = [por_id[bid] for bid in sorted(alocacao) for _ in range(alocacao[bid])]
+    else:
+        sequencia = [bases[i % len(bases)] for i in range(n_ambulancias)]
+    return [Ambulancia(id=f"amb-{i:03d}", base_id=b.id, lat=b.lat, lon=b.lon, worker_id=f"w{i % n_workers}")
+            for i, b in enumerate(sequencia)]
 
 
 def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
           politica: str = "mais_proxima", roteador: str = "haversine", seed: int = 42,
           chamados_por_dia: int = 300, n_despachantes: int = 2, n_workers: int = 2,
           visibilidade_seg: float = 30.0, log_dir: str | None = None,
-          cfg: Config | None = None) -> dict:
+          cfg: Config | None = None, alocacao: dict[str, int] | None = None) -> dict:
     rodada_id = uuid.uuid4().hex[:8]
     relogio = Relogio(fator=fator)
     repo = RepositorioMemoria()
@@ -46,7 +56,7 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
                               *relogio.checkpoint()))
     bairros = carregar_bairros("dados/bairros.csv")
     bases = carregar_bases("dados/bases.csv")
-    for a in montar_frota(bases, n_ambulancias, n_workers):
+    for a in montar_frota(bases, n_ambulancias, n_workers, alocacao):
         repo.salvar_ambulancia(a)
 
     logs_mem: list[EventLogMemoria] = []
@@ -111,6 +121,10 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
         "metricas": calcular(repo.listar_chamados()),
         "eventos": dict(eventos),
         "roteador_fallbacks": getattr(rot, "fallbacks", 0),
+        # dados brutos para diagnostico (otimizador de turnos)
+        "chamados": [asdict(c) for c in repo.listar_chamados()],
+        "ambulancias": [{"id": a.id, "base_id": a.base_id} for a in repo.listar_ambulancias()],
+        "alocacao": alocacao or dict(Counter(a.base_id for a in repo.listar_ambulancias())),
     }
 
 
