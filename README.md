@@ -1,10 +1,70 @@
 # samu-sim
 
-Simulador distribuído de despacho de ambulâncias no Rio de Janeiro. Chamados sintéticos
-(proporcionais à população por bairro) são despachados por N despachantes concorrentes que
-disputam ambulâncias com lock otimista; workers simulam o deslocamento em tempo acelerado.
+Simulador **distribuído** de despacho de ambulâncias no Rio de Janeiro, construído como
+ferramenta de apoio à decisão: *qual política de despacho reduz o tempo de resposta na Zona
+Oeste?* e *a partir de quantas ambulâncias o ganho é marginal?*
 
-Spec: `docs/superpowers/specs/2026-09-18-samu-sim-design.md`.
+Chamados sintéticos (proporcionais à população por bairro, com picos de manhã e à noite) entram
+numa fila **SQS**; N **despachantes** concorrentes escolhem a ambulância por uma política plugável e
+disputam a reserva com **lock otimista** no **DynamoDB**; **workers** simulam o deslocamento pela
+malha viária real (OSRM) em tempo acelerado; um **reaper** recupera ambulâncias de workers mortos;
+uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memória (1 processo), em
+`docker compose` com LocalStack, e numa EC2 com SQS/DynamoDB/S3 reais via Terraform.
+
+## Resultados
+
+![política × zona](docs/img/a_politicas_p90_zona.png)
+![tamanho da frota](docs/img/b_frota_p90.png)
+
+*24 h simuladas, 600 chamados/dia, 3 seeds, roteador `matriz` (tempos do OSRM); `scripts/experimentos.py` → `docs/experimentos/resultados.json`.*
+
+| A · política (50 ambulâncias) | P50 | P90 | P90 Norte | P90 **Oeste** |
+|---|---|---|---|---|
+| `mais_proxima` (linha reta) | 9,1 min | 21,0 min | 12 | **36** |
+| `menor_eta` (malha viária) | 8,9 min | 20,3 min | 11 | **32** |
+| `menor_eta_cobertura` (não esvaziar base) | 9,0 min | 20,3 min | 11 | **32** |
+
+| B · frota (`menor_eta`) | 20 | 30 | 40 | **50** | 65 | 80 |
+|---|---|---|---|---|---|---|
+| P90 | 431 min | 228 | 73 | **20,4** | 17,7 | 14,7 |
+| na fila ao fim do dia | 845 | 292 | 18 | 0 | 0 | 0 |
+
+**O insight:** a política importa onde a malha viária mais diverge da linha reta — despachar
+"pela reta" custa **4 min de P90 na Zona Oeste** (36 → 32) e 1 min no Norte, e nada no Centro/Sul.
+Já a frota tem um joelho nítido: com 40 ambulâncias a fila acumula ao longo do dia (P90 de 73 min);
+**50 é o mínimo estável** (P90 20 min); bater a meta de 15 min no P90 exige ~80. Ou seja: para
+600 chamados/dia o alavancador é frota, não política — e a política só paga na Zona Oeste.
+
+**Validação distribuída:** o mesmo cenário (6 h, seed 42) rodado na AWS — EC2 com 6 containers,
+SQS e DynamoDB reais — deu P50 7,8 / P90 29,5 min contra 8,3 / 29,7 em memória (< 2%): a
+infraestrutura não distorce o resultado (`scripts/experimento_aws.sh`).
+
+## Decisões de arquitetura (e o que mudou)
+
+| Decisão | Por quê | O que aprendi |
+|---|---|---|
+| Tempo real acelerado (fator 1–200) em vez de simulação a eventos discretos | os problemas de concorrência têm que existir de verdade | o relógio distribuído é a parte mais traiçoeira: wall-clock salta (VM), então cada serviço sincroniza uma vez e avança com `monotonic` |
+| SQS + DynamoDB desde o dia 1 (LocalStack) | um só código local e na AWS | SQS *standard* é at-least-once e sem ordem: idempotência por chamado + máquina de estados com versão resolveram |
+| Lock otimista (`ConditionExpression` em `status` e `versao`) | N despachantes disputam a mesma ambulância | corridas perdidas são contadas (`reserva_falhou`), nunca escondidas |
+| Heartbeat + reaper em vez de lease/lock distribuído | simples e observável | o reaper expôs 2 bugs (heartbeat na reserva; mensagem antiga após reatribuição) |
+| Roteador com 3 implementações (haversine → OSRM → matriz) | funcionar no dia 1, medir depois | a reta subestima o P90 da Zona Oeste em 22%; `/table` em lote resolveu o gargalo de 40 `/route` por despacho |
+| Métricas a partir do event log JSONL | uma fonte de verdade; vira dataset | o mesmo log alimenta o feed do console, o `analisar_rodada.py` e os experimentos |
+| EC2 t3.micro + compose (não Fargate) | custo zero | o build na instância atrasa o gerador ~30 min sim: chamados "do passado" precisam ser descartados |
+
+## O que eu faria diferente / próximos passos
+
+- **Relógio lógico** (ticks) em vez de tempo real acelerado: reprodutibilidade exata e rodadas
+  em segundos; custa uma barreira de sincronização entre serviços.
+- **Fargate + ALB** no lugar da EC2 única; **WebSocket + React** no lugar do polling.
+- **Dados reais** do Data.Rio (bairros/UPAs/SAMU) no lugar dos 19 bairros e 10 bases-proxy.
+- **Machine learning sobre o event log**: previsão de demanda por zona × hora para
+  *reposicionar* ambulâncias livres (a `Politica` é uma interface; uma `PoliticaML` entra sem
+  tocar no resto); e triagem/prioridade de chamados.
+- Experimento C: onde abrir 1 base nova para maximizar a queda do P90 na Zona Oeste.
+
+---
+
+Spec: `docs/superpowers/specs/2026-09-18-samu-sim-design.md` · planos por dia em `docs/superpowers/plans/`.
 
 ## Rodar (D1 — tudo em memória)
 
@@ -87,8 +147,7 @@ python scripts/comparar_roteadores.py --fator 3000 --duracao-sim 43200 --ambulan
 
 A linha reta subestima o P90 global em ~14% e o da Zona Oeste em **22%** — é onde a malha
 (Av. Brasil, Santa Cruz, Guaratiba) mais diverge da reta. A matriz reproduz o OSRM a ~5%,
-o que valida usá-la na AWS. Política `menor_eta_cobertura` (não esvaziar uma base) fica
-para os experimentos do D5.
+o que valida usá-la na AWS.
 
 **Gargalo medido:** `menor_eta` avalia todas as candidatas; 40 chamadas `/route` = 210 ms
 reais = 17 min *simulados* a fator 5000 (a primeira comparação saiu com P50 de 128 min por
@@ -134,4 +193,4 @@ caminho → no local → concluído) com a câmera enquadrando. Estado também p
 - [x] D2: docker compose + LocalStack (SQS/DynamoDB), reaper, análise de rodada
 - [x] D3: OSRM + política `menor_eta` real + matriz pré-computada
 - [x] D4: Terraform + EC2 + mapa (console ao vivo, modo seguir)
-- [ ] D5: experimentos A (políticas) e B (frota)
+- [x] D5: experimentos A (políticas) e B (frota), validação na AWS, gráficos
