@@ -116,8 +116,43 @@
   .legenda-mapa i.rota{border-radius:0;height:0;border-top:2px dashed var(--cam);background:none;width:14px}
   .mapa-wrap{position:relative;min-height:0}
 
+  /* modo seguir */
+  #seguir{position:absolute;top:12px;right:12px;z-index:950;width:300px;background:rgba(24,36,48,.96);border:1px solid var(--linha);
+    border-radius:8px;padding:14px 16px 12px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+  #seguir.vazio{width:auto;padding:0}
+  #seguir .cab{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  #seguir h3{margin:0;font-size:14px;font-weight:600}
+  #seguir .onde{color:var(--apagado);font-size:12px}
+  #seguir .fechar{background:none;border:0;color:var(--apagado);font:inherit;font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+  #seguir .fechar:hover{color:var(--texto)}
+  .etapas{list-style:none;margin:12px 0 0;padding:0}
+  .etapas li{position:relative;padding:0 0 12px 22px;font-size:12.5px;color:var(--apagado)}
+  .etapas li:before{content:"";position:absolute;left:5px;top:5px;width:8px;height:8px;border-radius:50%;background:#33445A;border:2px solid #33445A}
+  .etapas li:not(:last-child):after{content:"";position:absolute;left:8px;top:15px;bottom:-2px;width:2px;background:#33445A}
+  .etapas li.feita{color:var(--texto)}
+  .etapas li.feita:before{background:var(--disp);border-color:var(--disp)}
+  .etapas li.feita:after{background:var(--disp)}
+  .etapas li.atual{color:var(--texto)}
+  .etapas li.atual:before{background:var(--painel);border-color:var(--cam);animation:pulso2 1.6s infinite}
+  @keyframes pulso2{50%{box-shadow:0 0 0 4px rgba(255,90,95,.25)}}
+  @media (prefers-reduced-motion:reduce){.etapas li.atual:before{animation:none}}
+  .etapas .q{float:right;color:var(--apagado);font-size:11.5px}
+  .etapas small{display:block;color:var(--apagado)}
+  .etapas .prog{height:5px;background:#22303E;border-radius:2px;margin:6px 0 2px;overflow:hidden}
+  .etapas .prog i{display:block;height:100%;background:var(--cam);transition:width .3s}
+  .seg-acoes{display:flex;gap:6px;margin-top:6px}
+  .seg-acoes button,#seguirProx{flex:1;padding:7px 8px;border:1px solid var(--linha);background:transparent;color:var(--texto);border-radius:4px;font:inherit;font-size:12.5px;cursor:pointer}
+  .seg-acoes button:hover,#seguirProx:hover{background:#22303E}
+  .seg-acoes button[aria-pressed="true"]{background:#24405A;border-color:#2E5478}
+  #seguirProx{padding:9px 14px;background:rgba(24,36,48,.96);box-shadow:0 8px 30px rgba(0,0,0,.45)}
+  #seguirProx.esperando{border-color:var(--cham);color:var(--cham)}
+  #feed li.clic{cursor:pointer}
+  #feed li.clic:hover{background:#1E2C3A}
+  #feed li.seguido{background:#20334A}
+
   @media (max-width:1100px){#app{grid-template-columns:var(--lateral) 1fr}aside.dir{display:none}}
   @media (max-width:820px){
+    #seguir{left:12px;right:12px;width:auto;top:56px}
     #app{grid-template-columns:1fr;grid-template-rows:1fr auto}
     aside.esq{border-right:0;border-top:1px solid var(--linha);max-height:46vh;order:2;padding:16px}
     .relogio .hora{font-size:38px}.legenda-mapa{display:none}
@@ -176,6 +211,7 @@
 
   <div class="mapa-wrap">
     <div id="mapa"></div>
+    <div id="seguir" class="vazio"><button id="seguirProx">Seguir o próximo chamado</button></div>
     <div class="legenda-mapa">
       <div><i class="base"></i>base (hospital / UPA)</div>
       <div><i class="cham">×</i>chamado aguardando</div>
@@ -188,7 +224,7 @@
   </div>
 
   <aside class="dir">
-    <div class="feed-cab"><h1>O que está acontecendo</h1><p>eventos de todos os serviços, na hora simulada</p></div>
+    <div class="feed-cab"><h1>O que está acontecendo</h1><p>eventos de todos os serviços, na hora simulada · clique num chamado para segui-lo</p></div>
     <ul id="feed"></ul>
   </aside>
 </div>
@@ -208,6 +244,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attr
 const camadaRotas = L.layerGroup().addTo(mapa);
 
 let ultimo = null, recebidoEm = 0, pausada = false, basesDesenhadas = false;
+let seguindo = null, seguirCamera = true, esperandoProximo = false, seguindoDados = null;
 const bases = {}, amb = {}, rotas = {}, cham = {};
 
 const hhmm = s => { s = Math.max(0, s % 86400); return String(Math.floor(s/3600)).padStart(2,'0') + ':' + String(Math.floor(s%3600/60)).padStart(2,'0'); };
@@ -282,11 +319,101 @@ function aplicarEstado(e){
   const abertos = new Set();
   for (const c of e.chamados_abertos){ abertos.add(c.id);
     if (!cham[c.id]){ cham[c.id] = L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:'<div style="color:#FF8A3D;font:600 20px/14px IBM Plex Sans,sans-serif;text-shadow:0 0 6px rgba(0,0,0,.8)">×</div>',iconSize:[14,14],iconAnchor:[7,7]})}).addTo(mapa);
-      cham[c.id].bindPopup(() => popupCham(cham[c.id].dados)); }
+      cham[c.id].on('click', () => seguir(c.id)); }
     cham[c.id].dados = c; cham[c.id].setOpacity(c.ambulancia_id ? .55 : 1); }
   for (const id in cham) if (!abertos.has(id)){ mapa.removeLayer(cham[id]); delete cham[id]; }
   $('abertos').textContent = e.chamados_abertos.length;
+  aplicarDestaque();
 }
+
+/* ---------- modo seguir: um chamado vira o protagonista ---------- */
+function aplicarDestaque(){
+  const ambId = seguindoDados && seguindoDados.ambulancia && seguindoDados.ambulancia.id;
+  for (const id in amb){
+    const foco = !seguindo || id === ambId;
+    amb[id].setStyle({opacity: foco ? 1 : .25, fillOpacity: foco ? 1 : .25,
+      color: id === ambId ? '#FFFFFF' : '#0F1923', weight: id === ambId ? 2.5 : 1.5});
+    if (id === ambId) amb[id].bringToFront();
+  }
+  for (const id in cham) cham[id].setOpacity(!seguindo ? (cham[id].dados.ambulancia_id ? .55 : 1) : id === seguindo ? 1 : .2);
+  for (const id in rotas) rotas[id].setStyle({opacity: !seguindo ? .8 : id === ambId ? 1 : .15, weight: id === ambId ? 2.5 : 1.5});
+  for (const li of $('feed').children) li.classList.toggle('seguido', !!seguindo && li.dataset.chamado === seguindo);
+}
+
+function seguir(id){
+  seguindo = id; esperandoProximo = false; seguindoDados = null;
+  const b = $('seguirProx'); if (b) b.classList.remove('esperando');
+  atualizarSeguido(true).catch(err => console.error('seguir', err));
+}
+function pararDeSeguir(){
+  seguindo = null; seguindoDados = null;
+  $('seguir').className = 'vazio';
+  $('seguir').innerHTML = '<button id="seguirProx">Seguir o próximo chamado</button>';
+  $('seguirProx').onclick = esperarProximo;
+  aplicarDestaque();
+}
+function esperarProximo(){
+  esperandoProximo = !esperandoProximo;
+  $('seguirProx').classList.toggle('esperando', esperandoProximo);
+  $('seguirProx').textContent = esperandoProximo ? 'Aguardando o próximo chamado…' : 'Seguir o próximo chamado';
+}
+$('seguirProx').onclick = esperarProximo;
+
+function enquadrar(){
+  if (!seguindoDados) return;
+  const c = seguindoDados.chamado, a = seguindoDados.ambulancia;
+  const pts = [[c.lat, c.lon]];
+  if (a){ const m = amb[a.id]; if (m) pts.push(m.getLatLng()); const b = bases[a.base_id]; if (b && (a.status === 'a_caminho' || a.status === 'retornando' || a.status === 'reservada')) pts.push([b.lat, b.lon]); }
+  if (pts.length === 1) mapa.setView(pts[0], Math.max(mapa.getZoom(), 13), {animate: true});
+  else mapa.fitBounds(pts, {padding: [60, 60], maxZoom: 14, animate: true});
+}
+
+async function atualizarSeguido(primeira){
+  if (!seguindo) return;
+  const r = await fetch(`/chamados/${seguindo}`);
+  if (!r.ok){ pararDeSeguir(); return; }
+  const d = await r.json(); seguindoDados = d;
+  renderSeguido(d);
+  aplicarDestaque();
+  if (primeira || (seguirCamera && d.chamado.status !== 'atendido')) enquadrar();
+}
+
+function renderSeguido(d){
+  const c = d.chamado, a = d.ambulancia, agora = agoraSim();
+  const q = ts => ts != null ? `<span class="q">${hhmm(ts)}</span>` : '';
+  const etapas = [];
+  etapas.push({cls:'feita', t:`Chamado aberto ${q(c.criado_em)}`, s:`${c.bairro} · ${c.zona}`});
+  if (c.despachado_em == null){
+    etapas.push({cls:'atual', t:'Aguardando ambulância', s:`na fila há ${minutos(agora - c.criado_em)}`});
+    etapas.push({cls:'', t:'A caminho'}); etapas.push({cls:'', t:'No local'}); etapas.push({cls:'', t:'Concluído'});
+  } else {
+    const nomeBase = a && bases[a.base_id] ? bases[a.base_id].nome : (a ? a.base_id : '');
+    etapas.push({cls:'feita', t:`${c.ambulancia_id} despachada ${q(c.despachado_em)}`, s:`saiu de ${nomeBase} · espera de ${minutos(c.despachado_em - c.criado_em)}`});
+    if (c.chegada_em == null){
+      const total = (c.chegada_prevista_em || 0) - c.despachado_em, dec = agora - c.despachado_em;
+      const pct = total > 0 ? Math.min(100, Math.max(0, 100 * dec / total)) : 0;
+      etapas.push({cls:'atual', t:'A caminho', s:`chega em ${minutos(Math.max(0, (c.chegada_prevista_em || agora) - agora))}`, prog:pct});
+      etapas.push({cls:'', t:'No local'}); etapas.push({cls:'', t:'Concluído'});
+    } else {
+      etapas.push({cls:'feita', t:`Chegou ${q(c.chegada_em)}`, s:`tempo de resposta ${minutos(c.chegada_em - c.criado_em)}`});
+      if (c.liberado_em == null){
+        etapas.push({cls:'atual', t:'No local', s:`atendendo há ${minutos(agora - c.chegada_em)}`});
+        etapas.push({cls:'', t:'Concluído'});
+      } else {
+        etapas.push({cls:'feita', t:`Atendido ${q(c.liberado_em)}`, s:`${minutos(c.liberado_em - c.chegada_em)} no local`});
+        etapas.push({cls: a && a.status === 'retornando' ? 'atual' : 'feita', t: a && a.status === 'retornando' ? 'Ambulância voltando à base' : 'Concluído'});
+      }
+    }
+  }
+  const box = $('seguir'); box.className = '';
+  box.innerHTML = `<div class="cab"><div><h3>Seguindo ${c.id}</h3><div class="onde">${c.bairro} · Zona ${c.zona}${c.tentativas ? ' · redespachado ' + c.tentativas + '×' : ''}</div></div><button class="fechar" title="parar de seguir" aria-label="parar de seguir">×</button></div>
+    <ul class="etapas">${etapas.map(e => `<li class="${e.cls}">${e.t}${e.s ? `<small>${e.s}</small>` : ''}${e.prog != null ? `<div class="prog"><i style="width:${e.prog}%"></i></div>` : ''}</li>`).join('')}</ul>
+    <div class="seg-acoes"><button id="btnCam" aria-pressed="${seguirCamera}">Câmera segue</button><button id="btnEnq">Enquadrar</button></div>`;
+  box.querySelector('.fechar').onclick = pararDeSeguir;
+  $('btnCam').onclick = () => { seguirCamera = !seguirCamera; $('btnCam').setAttribute('aria-pressed', String(seguirCamera)); if (seguirCamera) enquadrar(); };
+  $('btnEnq').onclick = enquadrar;
+}
+setInterval(() => { if (seguindo) atualizarSeguido(false); }, 1500);
 
 /* animacao: 10x por segundo move quem esta em deslocamento e atualiza o relogio */
 setInterval(() => {
@@ -342,6 +469,8 @@ async function eventos(){
     const f = frase(e); if (!f) continue;
     const li = document.createElement('li'); if (f.s) li.className = 'sist';
     li.innerHTML = `<span class="t">${hhmm(e.ts_sim)}</span><i class="p${f.s ? ' sist' : ''}" style="--c:${f.c}"></i><span class="m">${f.m}</span>`;
+    if (e.chamado_id){ li.dataset.chamado = e.chamado_id; li.classList.add('clic'); li.onclick = () => seguir(e.chamado_id); }
+    if (e.tipo === 'chamado_criado' && esperandoProximo && e.ts_sim >= agoraSim() - 120) seguir(e.chamado_id);
     feed.prepend(li);
   }
   while (feed.children.length > FEED_MAX) feed.lastElementChild.remove();
