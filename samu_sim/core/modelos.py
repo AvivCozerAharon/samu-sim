@@ -37,6 +37,7 @@ class Base:
     nome: str
     lat: float
     lon: float
+    tipo: str = "base"  # hospital | upa (hospitais recebem o transporte do paciente)
 
 
 @dataclass

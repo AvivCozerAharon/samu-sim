@@ -4,12 +4,12 @@ from samu_sim.gerador.demanda import carregar_bases
 
 def test_montar_frota_distribui_por_base_e_worker():
     bases = carregar_bases("dados/bases.csv")
-    frota = montar_frota(bases, n_ambulancias=25, n_workers=2)
-    assert len(frota) == 25
+    frota = montar_frota(bases, n_ambulancias=len(bases) + 5, n_workers=2)
+    assert len(frota) == len(bases) + 5
     assert frota[0].id == "amb-000" and frota[0].base_id == "base-01" and frota[0].worker_id == "w0"
     assert frota[1].base_id == "base-02" and frota[1].worker_id == "w1"
-    assert frota[10].base_id == "base-01"
-    assert sum(1 for a in frota if a.worker_id == "w0") == 13
+    assert frota[len(bases)].base_id == "base-01"  # round-robin volta ao inicio
+    assert sum(1 for a in frota if a.worker_id == "w0") == (len(bases) + 5 + 1) // 2
 
 
 def test_fluxo_completo_em_memoria():

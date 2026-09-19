@@ -1,11 +1,44 @@
-id,nome,lat,lon
-base-01,Hospital Souza Aguiar (Centro),-22.9083,-43.1868
-base-02,Hospital Miguel Couto (Gavea),-22.9741,-43.2298
-base-03,Hospital Salgado Filho (Meier),-22.9012,-43.2820
-base-04,Hospital Getulio Vargas (Penha),-22.8420,-43.2770
-base-05,UPA Madureira,-22.8730,-43.3380
-base-06,Hospital Evandro Freire (Ilha),-22.8060,-43.1900
-base-07,Hospital Lourenco Jorge (Barra),-22.9987,-43.3651
-base-08,Hospital Albert Schweitzer (Realengo),-22.8794,-43.4348
-base-09,Hospital Rocha Faria (Campo Grande),-22.9040,-43.5610
-base-10,Hospital Pedro II (Santa Cruz),-22.9195,-43.6862
+id,nome,lat,lon,tipo,bairro,origem
+base-01,Hospital Municipal Souza Aguiar,-22.90874,-43.19034,hospital,Centro,nominatim
+base-02,Hospital Municipal Salgado Filho,-22.90068,-43.278,hospital,Meier,nominatim
+base-03,Hospital Municipal Miguel Couto,-22.97743,-43.2238,hospital,Leblon,nominatim
+base-04,Hospital Municipal Lourenco Jorge,-22.9948,-43.36419,hospital,Barra da Tijuca,nominatim
+base-05,Hospital Municipal Pedro II,-22.91306,-43.68772,hospital,Santa Cruz,nominatim
+base-06,Hospital Municipal Evandro Freire,-22.82308,-43.23063,hospital,Galeao,nominatim
+base-07,Hospital Municipal Albert Schweitzer,-22.8642,-43.44242,hospital,Realengo,nominatim
+base-08,Hospital Municipal Rocha Faria,-22.90822,-43.56241,hospital,Campo Grande,nominatim
+base-09,Hospital Municipal Rocha Maia,-22.95335,-43.17694,hospital,Botafogo,nominatim
+base-10,Hospital Municipal Francisco da Silva Telles,-22.83062,-43.32807,hospital,Iraja,nominatim
+base-11,Hospital Cardoso Fontes,-22.92589,-43.31612,hospital,Jacarepagua,nominatim
+base-12,Hospital do Andarai,-22.92701,-43.25141,hospital,Andarai,nominatim
+base-13,UPA Rocinha,-22.98679,-43.24683,upa,Rocinha,nominatim
+base-14,UPA Alemao,-22.8605,-43.26744,upa,Ramos,nominatim
+base-15,UPA Manguinhos,-22.88064,-43.24582,upa,Manguinhos,centroide
+base-16,UPA Del Castilho,-22.87192,-43.28193,upa,Inhauma,centroide
+base-17,UPA Engenho de Dentro,-22.90357,-43.30162,upa,Engenho de Dentro,nominatim
+base-18,UPA Madureira,-22.88505,-43.3474,upa,Campinho,centroide
+base-19,UPA Costa Barros,-22.82073,-43.36379,upa,Costa Barros,nominatim
+base-20,UPA Rocha Miranda,-22.84869,-43.343,upa,Rocha Miranda,nominatim
+base-21,UPA Cidade de Deus,-22.9481,-43.36286,upa,Cidade de Deus,centroide
+base-22,UPA Vila Kennedy,-22.85668,-43.48796,upa,Vila Kennedy,centroide
+base-23,UPA Senador Camara,-22.88181,-43.48205,upa,Senador Camara,nominatim
+base-24,UPA Magalhaes Bastos,-22.87247,-43.4137,upa,Magalhaes Bastos,centroide
+base-25,UPA Sepetiba,-22.97478,-43.69428,upa,Sepetiba,nominatim
+base-26,UPA Joao XXIII,-22.89417,-43.74309,upa,Santa Cruz,nominatim
+base-27,UPA Paciencia,-22.93333,-43.636,upa,Paciencia,nominatim
+base-28,UPA Bangu,-22.85845,-43.48541,upa,Bangu,centroide
+base-29,UPA Botafogo,-22.95232,-43.1861,upa,Botafogo,centroide
+base-30,UPA Campo Grande I,-22.89175,-43.55287,upa,Campo Grande,centroide
+base-31,UPA Campo Grande II,-22.90812,-43.61294,upa,Cosmos,centroide
+base-32,UPA Copacabana,-22.97062,-43.18748,upa,Copacabana,centroide
+base-33,UPA Engenho Novo,-22.90904,-43.26857,upa,Engenho Novo,centroide
+base-34,UPA Ilha do Governador,-22.79985,-43.20714,upa,Portuguesa,centroide
+base-35,UPA Iraja,-22.83501,-43.32606,upa,Iraja,centroide
+base-36,UPA Jacarepagua,-22.92172,-43.38462,upa,Taquara,centroide
+base-37,UPA Mare,-22.85968,-43.24248,upa,Mare,centroide
+base-38,UPA Marechal Hermes,-22.85916,-43.37067,upa,Marechal Hermes,centroide
+base-39,UPA Penha,-22.83779,-43.27603,upa,Penha,centroide
+base-40,UPA Realengo,-22.88098,-43.43369,upa,Realengo,centroide
+base-41,UPA Ricardo de Albuquerque,-22.83741,-43.39708,upa,Ricardo de Albuquerque,centroide
+base-42,UPA Santa Cruz,-22.91649,-43.70642,upa,Santa Cruz,centroide
+base-43,UPA Tijuca,-22.93302,-43.23885,upa,Tijuca,centroide
