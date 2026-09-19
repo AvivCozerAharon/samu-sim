@@ -8,3 +8,5 @@ logs/
 .terraform/
 *.tfstate*
 dados/osrm/
+infra/terraform.tfvars
+infra/.terraform.lock.hcl

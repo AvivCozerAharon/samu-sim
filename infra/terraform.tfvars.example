@@ -1,0 +1,4 @@
+# copie para terraform.tfvars (ignorado pelo git) e preencha
+meu_ip_cidr       = "SEU.IP.PUBLICO.AQUI/32"
+chave_ssh_publica = "ssh-ed25519 AAAA... seu@email"
+repo_git          = "https://github.com/SEU_USUARIO/samu-sim.git"
