@@ -9,13 +9,21 @@ from samu_sim.core.modelos import Base, Chamado
 
 SEGUNDOS_DIA = 86400
 
-# Peso relativo de cada hora do dia (picos 8-11h e 18-21h, vale de madrugada).
+# Peso relativo de cada hora do dia. Calibrado pela literatura de SAMU (analise de configuracao
+# do SAMU de Ribeirao Preto, SciELO): dois picos, por volta de 12 h e de 20 h, e vale de madrugada.
 PESOS_HORA: list[float] = [
-    0.4, 0.3, 0.3, 0.3, 0.4, 0.6,   # 0-5h
-    0.8, 1.2, 2.0, 2.0, 2.0, 2.0,   # 6-11h
-    1.4, 1.2, 1.2, 1.2, 1.3, 1.6,   # 12-17h
-    2.0, 2.0, 2.0, 2.0, 1.2, 0.7,   # 18-23h
+    0.55, 0.40, 0.35, 0.30, 0.30, 0.40,   # 0-5h   vale
+    0.60, 0.90, 1.20, 1.45, 1.65, 1.85,   # 6-11h  subida da manha
+    2.00, 1.85, 1.70, 1.65, 1.70, 1.85,   # 12-17h pico do meio-dia e tarde
+    1.95, 2.00, 2.05, 1.85, 1.45, 0.95,   # 18-23h pico da noite
 ]
+
+# Gravidade (classificacao do medico regulador) e tipo do chamado. Literatura SAMU: envios de
+# suporte avancado (vermelho) sao minoria; ~48-60 % clinicos e ~33 % trauma; trauma sobe a noite.
+PROB_PRIORIDADE = {"vermelho": 0.10, "amarelo": 0.30, "verde": 0.60}
+PROB_TRAUMA_DIA = 0.30
+PROB_TRAUMA_NOITE = 0.48  # 22h-4h: acidentes de transito, violencia
+HORAS_NOITE = {22, 23, 0, 1, 2, 3, 4}
 
 
 @dataclass
@@ -62,7 +70,11 @@ class GeradorChamados:
             hora = rng.choices(range(24), weights=PESOS_HORA, k=1)[0]
             ts = dia * SEGUNDOS_DIA + hora * 3600 + rng.uniform(0, 3600)
             lat, lon = deslocar(b.lat, b.lon, rng.uniform(0, self._raio), rng.uniform(0, 360))
-            chamados.append(Chamado(id="", lat=lat, lon=lon, bairro=b.nome, zona=b.zona, criado_em=ts))
+            prioridade = rng.choices(list(PROB_PRIORIDADE), weights=list(PROB_PRIORIDADE.values()), k=1)[0]
+            p_trauma = PROB_TRAUMA_NOITE if hora in HORAS_NOITE else PROB_TRAUMA_DIA
+            tipo = "trauma" if rng.random() < p_trauma else "clinico"
+            chamados.append(Chamado(id="", lat=lat, lon=lon, bairro=b.nome, zona=b.zona, criado_em=ts,
+                                    prioridade=prioridade, tipo=tipo))
         chamados.sort(key=lambda c: c.criado_em)
         for n, c in enumerate(chamados):
             c.id = f"ch-{dia:02d}-{n:05d}"

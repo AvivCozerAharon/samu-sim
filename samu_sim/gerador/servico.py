@@ -40,6 +40,7 @@ class ServicoGerador:
                 "chamado_id": c.id, "lat": c.lat, "lon": c.lon,
                 "bairro": c.bairro, "zona": c.zona, "criado_em": c.criado_em,
             })
-            self._log.registrar("chamado_criado", chamado_id=c.id, bairro=c.bairro, zona=c.zona)
+            self._log.registrar("chamado_criado", chamado_id=c.id, bairro=c.bairro, zona=c.zona,
+                                prioridade=c.prioridade, tipo_chamado=c.tipo)
             publicados += 1
         return publicados
