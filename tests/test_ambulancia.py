@@ -109,3 +109,38 @@ def test_mensagem_antiga_para_ambulancia_reatribuida_e_rejeitada():
     assert log.contar("transicao_rejeitada") == 1
     assert repo.obter_ambulancia("amb-1").status == SA.RESERVADA   # intacta, esperando a msg certa
     assert repo.obter_chamado("ch-1").chegada_em is None
+
+
+# ---------- ciclo com hospital (D6) ----------
+def test_ciclo_passa_pelo_hospital_mais_proximo():
+    relogio = Relogio(fator=100000)
+    repo = RepositorioMemoria()
+    base = Base("b1", "Base UPA", -22.90, -43.20, tipo="upa")
+    hosp_perto = Base("h1", "Hospital Perto", -22.96, -43.26, tipo="hospital")
+    hosp_longe = Base("h2", "Hospital Longe", -22.80, -43.60, tipo="hospital")
+    repo.salvar_ambulancia(Ambulancia(id="amb-1", base_id="b1", lat=base.lat, lon=base.lon, worker_id="w1"))
+    repo.salvar_chamado(Chamado(id="ch-1", lat=-22.95, lon=-43.25, bairro="X", zona="Sul", criado_em=0))
+    fila = FilaMemoria()
+    log = EventLogMemoria(relogio, "ambulancia")
+    w = WorkerAmbulancia("w1", fila, repo, relogio, RoteadorHaversine(),
+                         {"b1": base, "h1": hosp_perto, "h2": hosp_longe}, log,
+                         atendimento_seg=(600, 600), entrega_seg=(300, 300))
+    despachar(repo, fila)
+    w.processar_lote()
+    w.aguardar_ciclos(timeout=5)
+    tipos = [e["tipo"] for e in log.eventos]
+    assert tipos.index("chegou") < tipos.index("transporte_iniciado") < tipos.index("hospital_chegou") < tipos.index("liberada")
+    assert next(e for e in log.eventos if e["tipo"] == "transporte_iniciado")["hospital_id"] == "h1"
+    a = repo.obter_ambulancia("amb-1")
+    assert a.status == SA.DISPONIVEL and (a.lat, a.lon) == (base.lat, base.lon)
+    c = repo.obter_chamado("ch-1")
+    assert c.status == SC.ATENDIDO and c.liberado_em > c.chegada_em + 600  # atendimento + transporte + entrega
+
+
+def test_sem_hospital_cadastrado_volta_direto_para_a_base():
+    relogio, repo, fila, log, w = montar()  # bases = {"b1": BASE} sem tipo hospital
+    despachar(repo, fila)
+    w.processar_lote()
+    w.aguardar_ciclos(timeout=5)
+    assert log.contar("transporte_iniciado") == 0 and log.contar("liberada") == 1
+    assert repo.obter_ambulancia("amb-1").status == SA.DISPONIVEL
