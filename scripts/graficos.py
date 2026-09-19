@@ -131,6 +131,51 @@ def grafico_e(res: dict, saida: Path) -> None:
     fig.savefig(saida / "e_realismo.png", dpi=150)
 
 
+def grafico_d(exp: dict, saida: Path) -> None:
+    """Mapa (lat/lon) das candidatas a base nova: tamanho = demanda descoberta, cor = ganho de P90 na
+    triagem; finalistas com anel e a diferenca pareada [IC] contra a frota atual."""
+    from samu_sim.gerador.demanda import carregar_bases
+    bases = carregar_bases("dados/bases.csv")
+    fig, ax = plt.subplots(figsize=(9, 6.2))
+    ax.grid(False)
+    ax.scatter([b.lon for b in bases], [b.lat for b in bases], s=14, color="#5C6F82", marker="s", label="bases atuais")
+    tri = exp["triagem"]
+    ganhos = [-t["ganho_seg"] / 60 for t in tri]
+    tam = [40 + 260 * t["cand"]["demanda_descoberta"] / max(x["cand"]["demanda_descoberta"] for x in tri) for t in tri]
+    lim = max(abs(g) for g in ganhos) or 1
+    sc = ax.scatter([t["cand"]["lon"] for t in tri], [t["cand"]["lat"] for t in tri], s=tam, c=ganhos,
+                    cmap="RdYlGn", vmin=-lim, vmax=lim, edgecolor="#0F1923", linewidth=.6, zorder=3)
+    finais = {f["cand"]["id"]: f for f in exp["finalistas"]}
+    for t in tri:
+        c = t["cand"]
+        if c["id"] in finais:
+            d = finais[c["id"]]["vs_baseline"]["p90"]
+            ax.scatter([c["lon"]], [c["lat"]], s=tam[tri.index(t)] * 1.9, facecolor="none", edgecolor="#FFC857",
+                       linewidth=1.4, zorder=2)
+            sig = "" if d["significativo"] else " (n.s.)"
+            ax.annotate(f"{c['bairro']}
+{d['media'] / 60:+.1f} min [{d['baixo'] / 60:+.1f}, {d['alto'] / 60:+.1f}]{sig}",
+                        (c["lon"], c["lat"]), xytext=(8, 8), textcoords="offset points", fontsize=8.5, color="#E8EEF4")
+        else:
+            ax.annotate(c["bairro"], (c["lon"], c["lat"]), xytext=(6, -10), textcoords="offset points",
+                        fontsize=7.5, color="#8A9BAE")
+    cb = fig.colorbar(sc, ax=ax, shrink=.7, pad=.02)
+    cb.set_label("redução do P90 na triagem (min)")
+    cb.ax.yaxis.set_tick_params(color="#8A9BAE")
+    cfg = exp["config"]
+    ctrl = exp["vs_controle"]["p90"]
+    ax.set_title(f"D · onde abrir a próxima base — +{cfg['extra']} ambulâncias, {len(cfg['seeds_final'])} seeds, 24 h
+"
+                 f"controle (+{cfg['extra']} em {cfg['controle_base']}): {ctrl['media'] / 60:+.1f} min "
+                 f"[{ctrl['baixo'] / 60:+.1f}, {ctrl['alto'] / 60:+.1f}]", loc="left", fontsize=10.5)
+    ax.set_xlabel("longitude")
+    ax.set_ylabel("latitude")
+    ax.set_aspect(1 / abs(__import__("math").cos(__import__("math").radians(-22.9))))
+    ax.legend(loc="lower left", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(saida / "d_expansao.png", dpi=150)
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--entrada", default="docs/experimentos/resultados.json")
@@ -149,6 +194,9 @@ def main() -> None:
     turnos = Path(a.entrada).parent / "turnos.json"
     if turnos.exists():
         grafico_c(json.loads(turnos.read_text(encoding="utf-8")), saida)
+    expansao = Path(a.entrada).parent / "expansao.json"
+    if expansao.exists():
+        grafico_d(json.loads(expansao.read_text(encoding="utf-8")), saida)
     print(f"graficos em {saida}/")
 
 
