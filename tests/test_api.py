@@ -146,8 +146,8 @@ def test_cenarios_fluxo():
     g = GerenciadorCenarios(lambda cen, s, d, f: executar(cen, s, d, f, fake_rodar))
     app = criar_app(repo, FilaMemoria(), {}, relogio, EventLogMemoria(relogio, "api"), gerenciador_cenarios=g)
     cli = TestClient(app)
-    r1 = cli.post("/cenarios", json={"cenario": {"nome": "73"}, "seeds": [1, 2]})
-    r2 = cli.post("/cenarios", json={"cenario": {"nome": "80", "n_ambulancias": 80}, "seeds": [1, 2]})
+    r1 = cli.post("/cenarios", json={"cenario": {"nome": "73"}, "seeds": [1, 2, 3]})
+    r2 = cli.post("/cenarios", json={"cenario": {"nome": "80", "n_ambulancias": 80}, "seeds": [1, 2, 3]})
     assert r1.status_code == 202
     a, b = r1.json()["id"], r2.json()["id"]
     for _ in range(200):
