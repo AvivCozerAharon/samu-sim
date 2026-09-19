@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from samu_sim.api.reaper import Reaper
+from samu_sim.cenarios import Cenario, comparar
 from samu_sim.core.metricas import calcular
 from samu_sim.core.modelos import Base, StatusChamado
 from samu_sim.core.relogio import Relogio
@@ -72,7 +73,7 @@ class Controle(BaseModel):
 def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], relogio: Relogio,
               eventlog: EventLog, agora_real=time.time, reaper_timeout_seg: float = 120.0,
               intervalo_ws_seg: float = 1.0, log_dir=None, rodada_id: str | None = None,
-              turnos_path=None) -> FastAPI:
+              turnos_path=None, gerenciador_cenarios=None, expansao_path=None) -> FastAPI:
     app = FastAPI(title="samu-sim")
     app.state.reaper = Reaper(repo, fila_chamados, bases, eventlog, reaper_timeout_seg, agora_real)
     app.state.relogio = relogio
@@ -157,6 +158,52 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
         if caminho is None or not caminho.exists():
             raise HTTPException(status_code=404, detail="sem turnos: rode scripts/turnos.py")
         return json.loads(caminho.read_text(encoding="utf-8"))
+
+    @app.get("/expansao")
+    def expansao():
+        """Resultado do experimento D (scripts/experimento_d.py), se existir."""
+        caminho = Path(expansao_path) if expansao_path else None
+        if caminho is None or not caminho.exists():
+            raise HTTPException(status_code=404, detail="sem expansao: rode scripts/experimento_d.py")
+        return json.loads(caminho.read_text(encoding="utf-8"))
+
+    # --- cenarios: "e se...?" com N seeds e IC, rodando em memoria numa thread da API ---
+    @app.post("/cenarios", status_code=202)
+    def submeter_cenario(corpo: dict):
+        if gerenciador_cenarios is None:
+            raise HTTPException(status_code=503, detail="cenarios desligados nesta instancia")
+        try:
+            c = Cenario.de_dict(corpo.get("cenario") or {})
+        except TypeError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        seeds = [int(s) for s in (corpo.get("seeds") or [42, 7, 2024])][:20]
+        dur = min(float(corpo.get("duracao_sim_seg") or 86400), 7 * 86400)
+        fator = float(corpo.get("fator") or 2000)
+        return {"id": gerenciador_cenarios.submeter(c, seeds, dur, fator)}
+
+    @app.get("/cenarios")
+    def listar_cenarios():
+        return gerenciador_cenarios.listar() if gerenciador_cenarios else []
+
+    @app.get("/cenarios/{jid}")
+    def obter_cenario(jid: str):
+        j = gerenciador_cenarios.obter(jid) if gerenciador_cenarios else None
+        if j is None:
+            raise HTTPException(status_code=404, detail="cenario nao encontrado")
+        return j
+
+    @app.get("/cenarios/{a}/comparar/{b}")
+    def comparar_cenarios(a: str, b: str):
+        ja = gerenciador_cenarios.obter(a) if gerenciador_cenarios else None
+        jb = gerenciador_cenarios.obter(b) if gerenciador_cenarios else None
+        if ja is None or jb is None:
+            raise HTTPException(status_code=404, detail="cenario nao encontrado")
+        if ja["status"] != "concluido" or jb["status"] != "concluido":
+            raise HTTPException(status_code=409, detail="os dois cenarios precisam estar concluidos")
+        try:
+            return comparar(ja["resultado"], jb["resultado"])
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
 
     @app.get("/eventos")
     def eventos(desde: float = -1.0, limite: int = 100):

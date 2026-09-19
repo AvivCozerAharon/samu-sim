@@ -43,3 +43,15 @@ def test_reposicionamento_muda_base_de_ambulancias():
     assert r["eventos"].get("reposicionada", 0) >= 1
     assert r["eventos"].get("erro_ciclo", 0) == 0
     assert r["rodada"]["reposicionamento"] is True
+
+
+def test_rodar_com_base_extra_recebe_ambulancias():
+    from samu_sim.core.modelos import Base
+    from samu_sim.gerador.demanda import carregar_bases
+    nova = Base("cand-teste", "Candidata teste", -22.90, -43.60, "candidata")
+    aloc = {b.id: 0 for b in carregar_bases("dados/bases.csv")}
+    aloc[nova.id] = 2
+    r = rodar(fator=5000, duracao_sim_seg=600, n_ambulancias=2, roteador="haversine",
+                    seed=1, chamados_por_dia=50, visibilidade_seg=0.2, alocacao=aloc, bases_extra=[nova])
+    assert all(a["base_id"] == "cand-teste" for a in r["ambulancias"])
+    assert r["rodada"]["bases_extra"] == ["cand-teste"]

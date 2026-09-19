@@ -13,6 +13,7 @@ import uvicorn
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from samu_sim.ambulancia.servico import WorkerAmbulancia  # noqa: E402
 from samu_sim.api import criar_app  # noqa: E402
+from samu_sim.cenarios import criar_gerenciador  # noqa: E402
 from samu_sim.core.config import Config  # noqa: E402
 from samu_sim.core.modelos import PRIORIDADES, Rodada  # noqa: E402
 from samu_sim.core.relogio import Relogio  # noqa: E402
@@ -73,7 +74,8 @@ def main() -> None:
         threading.Thread(target=loop_servico, args=(w.processar_lote, parar, 0.05), daemon=True).start()
 
     app = criar_app(repo, fila, bases_por_id, relogio, log("api"), log_dir=log_dir, rodada_id=rodada_id,
-                    turnos_path="docs/experimentos/turnos.json")
+                    turnos_path="docs/experimentos/turnos.json", gerenciador_cenarios=criar_gerenciador(),
+                    expansao_path="docs/experimentos/expansao.json")
     print(f"samu-sim dev: http://localhost:{a.porta}/  (fator {a.fator}, {a.ambulancias} ambulancias, {a.politica}, {a.roteador})")
     uvicorn.run(app, host="127.0.0.1", port=a.porta, log_level="warning")
     parar.set()
