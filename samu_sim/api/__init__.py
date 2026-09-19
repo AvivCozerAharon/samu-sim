@@ -133,6 +133,17 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
     def saude():
         return {"ok": True}
 
+    @app.get("/chamados/{chamado_id}")
+    def chamado(chamado_id: str):
+        """Chamado completo (inclusive ja atendido) + ambulancia atribuida, para o modo 'seguir'."""
+        c = repo.obter_chamado(chamado_id)
+        if c is None:
+            raise HTTPException(status_code=404, detail="chamado nao encontrado")
+        a = repo.obter_ambulancia(c.ambulancia_id) if c.ambulancia_id else None
+        dados_c = asdict(c) | {"status": str(c.status)}
+        dados_a = (asdict(a) | {"status": str(a.status)}) if a else None
+        return {"chamado": dados_c, "ambulancia": dados_a}
+
     @app.get("/eventos")
     def eventos(desde: float = -1.0, limite: int = 100):
         """Ultimos eventos do event log (todos os servicos) com ts_sim > desde."""

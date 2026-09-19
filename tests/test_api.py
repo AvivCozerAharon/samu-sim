@@ -112,3 +112,16 @@ def test_eventos_le_jsonl_da_rodada_incrementalmente(tmp_path):
     with open(pasta / "gerador.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps({"ts_sim": 12, "tipo": "chamado_criado", "chamado_id": "ch-2"}) + "\n")
     assert c.get("/eventos?desde=9").json()[0]["chamado_id"] == "ch-2"
+
+
+def test_chamado_por_id_com_ambulancia():
+    c, repo, relogio, t = montar()
+    assert c.get("/chamados/nao-existe").status_code == 404
+    repo.reservar_ambulancia("amb-1", 0, "ch-1")
+    ch = repo.obter_chamado("ch-1")
+    ch.status = SC.DESPACHADO
+    ch.ambulancia_id = "amb-1"
+    repo.salvar_chamado(ch)
+    r = c.get("/chamados/ch-1").json()
+    assert r["chamado"]["id"] == "ch-1" and r["chamado"]["status"] == "despachado"
+    assert r["ambulancia"]["id"] == "amb-1" and r["ambulancia"]["status"] == "reservada"
