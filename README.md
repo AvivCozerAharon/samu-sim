@@ -16,28 +16,35 @@ uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memóri
 ![política × zona](docs/img/a_politicas_p90_zona.png)
 ![tamanho da frota](docs/img/b_frota_p90.png)
 
-*24 h simuladas, 600 chamados/dia, 3 seeds, roteador `matriz` (tempos do OSRM); `scripts/experimentos.py` → `docs/experimentos/resultados.json`.*
+*24 h simuladas, 600 chamados/dia (≈ os 592/dia reais do SAMU-RJ), 3 seeds, 165 bairros do Censo
+2022, 43 bases reais, tempos do OSRM, ciclo com transporte ao hospital. `scripts/experimentos.py` →
+`docs/experimentos/resultados.json`; calibração e fontes em [`docs/calibracao.md`](docs/calibracao.md).*
 
-| A · política (50 ambulâncias) | P50 | P90 | P90 Norte | P90 **Oeste** |
+| A · política (73 ambulâncias = frota real) | P50 | P90 | P90 Barra | P90 **Oeste** |
 |---|---|---|---|---|
-| `mais_proxima` (linha reta) | 9,1 min | 21,0 min | 12 | **36** |
-| `menor_eta` (malha viária) | 8,9 min | 20,3 min | 11 | **32** |
-| `menor_eta_cobertura` (não esvaziar base) | 9,0 min | 20,3 min | 11 | **32** |
+| `mais_proxima` (linha reta) | 7,5 min | 16,5 min | 22 | **16** |
+| `menor_eta` (malha viária) | 7,6 min | 16,0 min | 22 | **12** |
+| `menor_eta_cobertura` (não esvaziar base) | 8,9 min | 18,4 min | 24 | 15 |
 
-| B · frota (`menor_eta`) | 20 | 30 | 40 | **50** | 65 | 80 |
+| B · frota (`menor_eta`) | 20 | 30 | 40 | 50 | **65** | 80 |
 |---|---|---|---|---|---|---|
-| P90 | 431 min | 228 | 73 | **20,4** | 17,7 | 14,7 |
-| na fila ao fim do dia | 845 | 292 | 18 | 0 | 0 | 0 |
+| P90 | 404 min | 406 | 223 | 127 | **17,9** | 15,0 |
+| na fila ao fim do dia | 1045 | 757 | 393 | 155 | 0 | 0 |
 
-**O insight:** a política importa onde a malha viária mais diverge da linha reta — despachar
-"pela reta" custa **4 min de P90 na Zona Oeste** (36 → 32) e 1 min no Norte, e nada no Centro/Sul.
-Já a frota tem um joelho nítido: com 40 ambulâncias a fila acumula ao longo do dia (P90 de 73 min);
-**50 é o mínimo estável** (P90 20 min); bater a meta de 15 min no P90 exige ~80. Ou seja: para
-600 chamados/dia o alavancador é frota, não política — e a política só paga na Zona Oeste.
+**Os insights:**
 
-**Validação distribuída:** o mesmo cenário (6 h, seed 42) rodado na AWS — EC2 com 6 containers,
-SQS e DynamoDB reais — deu P50 7,8 / P90 29,5 min contra 8,3 / 29,7 em memória (< 2%): a
-infraestrutura não distorce o resultado (`scripts/experimento_aws.sh`).
+- **A frota real está no lugar certo.** Com o ciclo completo (deslocamento + 20–30 min no local +
+  transporte ao hospital + entrega), 50 ambulâncias colapsam ao longo do dia (155 na fila) e o joelho
+  fica em ~65; o SAMU-RJ opera 73 — dentro da faixa estável, com P90 ≈ 16 min. Bater 15 min exige ~80.
+- **A política paga na Zona Oeste.** Despachar pela linha reta custa 4 min de P90 lá (16 → 12 com a
+  malha viária), porque o Maciço da Pedra Branca e a baía de Sepetiba tornam a "mais próxima" enganosa;
+  no resto da cidade a diferença some. Em regime saturado (50 ambulâncias) a diferença era de 40 → 17 min.
+- **"Não esvaziar a base" piorou.** A política com penalidade de cobertura manda uma ambulância mais
+  longe para preservar a base — e o custo de resposta supera o ganho de cobertura. Um resultado negativo
+  útil: a intuição estava errada, e só a medição mostrou.
+
+**Validação distribuída:** o mesmo cenário rodado na AWS — EC2 com 6 containers, SQS e DynamoDB
+reais — reproduziu o modelo em memória com < 2 % de diferença (`scripts/experimento_aws.sh`).
 
 ## Decisões de arquitetura (e o que mudou)
 
@@ -194,3 +201,4 @@ caminho → no local → concluído) com a câmera enquadrando. Estado também p
 - [x] D3: OSRM + política `menor_eta` real + matriz pré-computada
 - [x] D4: Terraform + EC2 + mapa (console ao vivo, modo seguir)
 - [x] D5: experimentos A (políticas) e B (frota), validação na AWS, gráficos
+- [x] D6: dados reais (Censo 2022, hospitais/UPAs, estatísticas do SAMU-RJ), gravidade, ciclo com hospital

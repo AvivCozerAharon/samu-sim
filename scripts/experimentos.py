@@ -15,6 +15,7 @@ SEEDS = [42, 7, 2024]
 ZONAS = ["Centro", "Sul", "Norte", "Barra", "Oeste"]
 POLITICAS = ["mais_proxima", "menor_eta", "menor_eta_cobertura"]
 FROTAS = [20, 30, 40, 50, 65, 80]
+FROTA_A = 73  # frota real do SAMU-RJ (2024): 73 ambulancias
 
 
 def rodar(politica, n_amb, seed, duracao, fator, chamados_por_dia):
@@ -52,6 +53,7 @@ def main() -> None:
     p.add_argument("--fator", type=float, default=2000)
     p.add_argument("--chamados-por-dia", type=int, default=600)
     p.add_argument("--saida", default="docs/experimentos/resultados.json")
+    p.add_argument("--apenas", choices=["A", "B"], default=None, help="roda so um experimento e preserva o outro no JSON")
     a = p.parse_args()
     seeds = SEEDS[:1] if a.rapido else SEEDS
     duracao = 12 * 3600 if a.rapido else 24 * 3600
@@ -59,17 +61,20 @@ def main() -> None:
     runner.INTERVALO_OCIOSO_REAL = 0.005
 
     resultados = {"config": {"seeds": seeds, "duracao_sim_seg": duracao, "fator": a.fator,
-                             "chamados_por_dia": a.chamados_por_dia, "roteador": "matriz"},
+                             "chamados_por_dia": a.chamados_por_dia, "roteador": "matriz", "frota_a": FROTA_A},
                   "A": {}, "B": {}}
+    if a.apenas and Path(a.saida).exists():
+        anterior = json.loads(Path(a.saida).read_text(encoding="utf-8"))
+        resultados["B" if a.apenas == "A" else "A"] = anterior.get("B" if a.apenas == "A" else "A", {})
     inicio = time.time()
-    for pol in POLITICAS:
-        rodadas = [rodar(pol, 50, s, duracao, a.fator, a.chamados_por_dia) for s in seeds]
+    for pol in POLITICAS if a.apenas != "B" else []:
+        rodadas = [rodar(pol, FROTA_A, s, duracao, a.fator, a.chamados_por_dia) for s in seeds]
         resultados["A"][pol] = {"rodadas": rodadas, "resumo": resumo(rodadas)}
         print(f"A {pol:22s} P50 {resultados['A'][pol]['resumo']['p50']['media']/60:5.1f}  "
               f"P90 {resultados['A'][pol]['resumo']['p90']['media']/60:5.1f}  "
               + "  ".join(f"{z}={resultados['A'][pol]['resumo']['por_zona'][z]['media']/60:.0f}" for z in ZONAS
                           if resultados['A'][pol]['resumo']['por_zona'][z]['media'] is not None), flush=True)
-    for n in FROTAS:
+    for n in FROTAS if a.apenas != "A" else []:
         rodadas = [rodar("menor_eta", n, s, duracao, a.fator, a.chamados_por_dia) for s in seeds]
         resultados["B"][str(n)] = {"rodadas": rodadas, "resumo": resumo(rodadas)}
         rs = resultados["B"][str(n)]["resumo"]
