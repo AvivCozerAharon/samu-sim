@@ -21,6 +21,7 @@ class Repositorio(Protocol):
     def reservar_ambulancia(self, id: str, versao: int, chamado_id: str,
                             heartbeat_em: float = 0.0) -> Ambulancia: ...
     def atualizar_heartbeat(self, id: str, ts: float) -> None: ...
+    def atualizar_posicao_se_disponivel(self, id: str, lat: float, lon: float) -> bool: ...
     def liberar_ambulancia(self, id: str, versao: int, lat: float, lon: float) -> Ambulancia: ...
     def transicionar(self, id: str, de: StatusAmbulancia, para: StatusAmbulancia,
                      versao: int, **campos) -> Ambulancia: ...
@@ -61,6 +62,16 @@ class RepositorioMemoria:
             a = self._amb.get(id)
             if a is not None:
                 self._amb[id] = replace(a, heartbeat_em=ts)
+
+    def atualizar_posicao_se_disponivel(self, id: str, lat: float, lon: float) -> bool:
+        """Move uma ambulancia disponivel (retorno a base) sem mexer na versao; se ela foi
+        reservada no meio do caminho, nao mexe e devolve False."""
+        with self._lock:
+            a = self._amb.get(id)
+            if a is None or a.status != StatusAmbulancia.DISPONIVEL:
+                return False
+            self._amb[id] = replace(a, lat=lat, lon=lon)
+            return True
 
     def liberar_ambulancia(self, id: str, versao: int, lat: float, lon: float) -> Ambulancia:
         """Usado pelo reaper: forca DISPONIVEL de qualquer estado, condicional so na versao."""

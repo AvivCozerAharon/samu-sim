@@ -15,6 +15,9 @@ from samu_sim.infra.repositorio import ConflitoVersao, Repositorio
 from samu_sim.roteador import Roteador
 
 
+PASSO_RETORNO_SIM = 30.0  # atualiza a posicao no retorno a cada 30 s simulados (ou 1/20 do trajeto)
+
+
 class WorkerAmbulancia:
     def __init__(self, worker_id: str, fila_eventos: Fila, repo: Repositorio, relogio: Relogio,
                  roteador: Roteador, bases: dict[str, Base], eventlog: EventLog,
@@ -144,13 +147,29 @@ class WorkerAmbulancia:
         chamado.liberado_em = agora
         chamado.status = StatusChamado.ATENDIDO
         self._repo.salvar_chamado(chamado)
-        a = self._transicionar(amb_id, de, SA.RETORNANDO, lat=posicao[0], lon=posicao[1])
+        # ja e despachavel aqui (no hospital ou no local): o retorno a base e interrompivel
+        a = self._transicionar(amb_id, de, SA.DISPONIVEL, lat=posicao[0], lon=posicao[1], chamado_id=None)
         self._log.registrar("liberada", ambulancia_id=amb_id, chamado_id=ch_id)
+        self._retornar(amb_id, posicao, self._bases[a.base_id])
 
-        base = self._bases[a.base_id]
-        self._relogio.dormir_sim(self._roteador.eta(posicao, (base.lat, base.lon)))
-        self._transicionar(amb_id, SA.RETORNANDO, SA.DISPONIVEL,
-                           lat=base.lat, lon=base.lon, chamado_id=None)
+    def _retornar(self, amb_id: str, origem, base: Base) -> None:
+        """Volta a base movendo a posicao a cada passo; se for reservada no caminho, para
+        (a proxima corrida sai de onde ela estiver)."""
+        destino = (base.lat, base.lon)
+        total = self._roteador.eta(origem, destino)
+        if total <= 0:
+            return
+        passo = max(PASSO_RETORNO_SIM, total / 20)
+        decorrido = 0.0
+        while decorrido < total:
+            self._relogio.dormir_sim(min(passo, total - decorrido))
+            decorrido = min(total, decorrido + passo)
+            t = decorrido / total
+            lat = origem[0] + (destino[0] - origem[0]) * t
+            lon = origem[1] + (destino[1] - origem[1]) * t
+            if not self._repo.atualizar_posicao_se_disponivel(amb_id, lat, lon):
+                self._log.registrar("retorno_interrompido", ambulancia_id=amb_id, progresso=round(t, 2))
+                return
 
     def _hospital_mais_proximo(self, p):
         if not self._hospitais:

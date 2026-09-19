@@ -183,6 +183,20 @@ class RepositorioDynamo:
             raise
         return de_item(Ambulancia, r["Attributes"])
 
+    def atualizar_posicao_se_disponivel(self, id: str, lat: float, lon: float) -> bool:
+        try:
+            self._amb.update_item(
+                Key={"id": id}, UpdateExpression="SET lat = :lat, lon = :lon",
+                ConditionExpression="#status = :disp",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={":lat": Decimal(repr(lat)), ":lon": Decimal(repr(lon)),
+                                           ":disp": str(StatusAmbulancia.DISPONIVEL)})
+            return True
+        except ClientError as e:
+            if _conflito(e):
+                return False
+            raise
+
     def atualizar_heartbeat(self, id: str, ts: float) -> None:
         self._amb.update_item(Key={"id": id}, UpdateExpression="SET heartbeat_em = :t",
                               ExpressionAttributeValues={":t": Decimal(repr(ts))})

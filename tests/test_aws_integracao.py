@@ -33,7 +33,7 @@ def cfg():
 
 def test_fila_sqs_publica_recebe_ack(cfg):
     sqs = cliente_sqs(cfg)
-    url = sqs.get_queue_url(QueueName=cfg.fila_chamados)["QueueUrl"]
+    url = sqs.get_queue_url(QueueName=cfg.filas_chamados()["vermelho"])["QueueUrl"]
     f = FilaSQS(sqs, url)
     f.publicar({"chamado_id": "ch-1", "x": 1.5})
     msgs = f.receber()
@@ -67,3 +67,12 @@ def test_dynamo_chamado_e_rodada(cfg):
     assert any(x.id == "ch-1" for x in repo.listar_chamados())
     repo.salvar_rodada(Rodada("atual", 1, "mais_proxima", 20.0, 5, "haversine", 100.0, 0.0))
     assert repo.obter_rodada().fator == 20.0
+
+
+def test_dynamo_atualizar_posicao_condicional(cfg):
+    repo = RepositorioDynamo(recurso_dynamo(cfg), cfg)
+    repo.salvar_ambulancia(Ambulancia(id="amb-7", base_id="b", lat=-22.9, lon=-43.2, worker_id="w0"))
+    assert repo.atualizar_posicao_se_disponivel("amb-7", -22.8, -43.3) is True
+    repo.reservar_ambulancia("amb-7", 0, "ch-x")
+    assert repo.atualizar_posicao_se_disponivel("amb-7", 0.0, 0.0) is False
+    assert repo.obter_ambulancia("amb-7").lat == -22.8

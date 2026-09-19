@@ -144,3 +144,42 @@ def test_sem_hospital_cadastrado_volta_direto_para_a_base():
     w.aguardar_ciclos(timeout=5)
     assert log.contar("transporte_iniciado") == 0 and log.contar("liberada") == 1
     assert repo.obter_ambulancia("amb-1").status == SA.DISPONIVEL
+
+
+# ---------- disponivel no retorno (D8) ----------
+def test_liberada_fica_disponivel_e_retorna_movendo():
+    relogio, repo, fila, log, w = montar()
+    despachar(repo, fila)
+    w.processar_lote()
+    w.aguardar_ciclos(timeout=5)
+    a = repo.obter_ambulancia("amb-1")
+    assert a.status == SA.DISPONIVEL and (a.lat, a.lon) == (BASE.lat, BASE.lon)
+    tipos = [e["tipo"] for e in log.eventos]
+    assert "liberada" in tipos and "retorno_interrompido" not in tipos
+
+
+def test_reserva_durante_o_retorno_interrompe_sem_sobrescrever_posicao():
+    import threading
+    relogio = Relogio(fator=50)  # retorno longo o bastante para intervir
+    repo = RepositorioMemoria()
+    repo.salvar_ambulancia(Ambulancia(id="amb-1", base_id="b1", lat=BASE.lat, lon=BASE.lon, worker_id="w1"))
+    repo.salvar_chamado(Chamado(id="ch-1", lat=-22.99, lon=-43.30, bairro="X", zona="Sul", criado_em=0))
+    fila = FilaMemoria()
+    log = EventLogMemoria(relogio, "ambulancia")
+    w = WorkerAmbulancia("w1", fila, repo, relogio, RoteadorHaversine(), {"b1": BASE}, log,
+                         atendimento_seg=(1, 1))
+    despachar(repo, fila, eta=1.0)
+    w.processar_lote()
+    # espera a ambulancia ficar disponivel (liberada no local) e comecar a voltar
+    for _ in range(200):
+        if log.contar("liberada"):
+            break
+        threading.Event().wait(0.02)
+    a = repo.obter_ambulancia("amb-1")
+    assert a.status == SA.DISPONIVEL
+    repo.reservar_ambulancia("amb-1", a.versao, "ch-2")   # outro despachante pega no caminho
+    w.aguardar_ciclos(timeout=10)
+    b = repo.obter_ambulancia("amb-1")
+    assert b.status == SA.RESERVADA and b.chamado_id == "ch-2"
+    assert (b.lat, b.lon) != (BASE.lat, BASE.lon)          # posicao nao foi "teleportada" para a base
+    assert log.contar("retorno_interrompido") == 1
