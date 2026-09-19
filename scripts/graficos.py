@@ -56,7 +56,7 @@ def grafico_b(res: dict, saida: Path) -> None:
         med = [res["B"][str(n)]["resumo"][chave]["media"] / 60 for n in frotas]
         dp = [(res["B"][str(n)]["resumo"][chave]["dp"] or 0) / 60 for n in frotas]
         ax.plot(frotas, med, marker="o", color=cor, lw=2, label=rot)
-        ax.fill_between(frotas, [m - d for m, d in zip(med, dp)], [m + d for m, d in zip(med, dp)],
+        ax.fill_between(frotas, [max(5, m - d) for m, d in zip(med, dp)], [m + d for m, d in zip(med, dp)],
                         color=cor, alpha=.15, lw=0)
     ax.axhline(META_MIN, color="#FFC857", lw=1.2, ls="--")
     ax.text(frotas[-1], META_MIN + 1, "meta 15 min", color="#FFC857", ha="right", fontsize=9)
@@ -64,10 +64,14 @@ def grafico_b(res: dict, saida: Path) -> None:
         rs = res["B"][str(n)]["resumo"]
         if rs["pendentes"]:
             ax.annotate(f"{rs['pendentes']} na fila\nao fim do dia", (n, rs["p90"]["media"] / 60),
-                        textcoords="offset points", xytext=(10, -16), fontsize=8, color="#FF8A3D")
+                        textcoords="offset points", xytext=(10, 4), fontsize=8, color="#FF8A3D")
     ax.set_xlabel("ambulâncias na frota")
-    ax.set_ylabel("tempo de resposta (min)")
+    ax.set_ylabel("tempo de resposta (min, escala log)")
     ax.set_xticks(frotas)
+    ax.set_yscale("log")
+    ticks = [5, 10, 15, 20, 30, 50, 100, 200, 400]
+    ax.set_yticks(ticks, [str(t) for t in ticks])
+    ax.set_ylim(5, 600)
     c = res["config"]
     ax.set_title(f"B · tamanho da frota — menor ETA, {c['chamados_por_dia']} chamados/dia, "
                  f"{len(c['seeds'])} seed(s)", loc="left", fontsize=11)
