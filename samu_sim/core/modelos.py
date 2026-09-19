@@ -8,6 +8,7 @@ class StatusAmbulancia(StrEnum):
     RESERVADA = "reservada"
     A_CAMINHO = "a_caminho"
     NO_LOCAL = "no_local"
+    TRANSPORTANDO = "transportando"  # levando o paciente ao hospital
     RETORNANDO = "retornando"
 
 
@@ -21,8 +22,11 @@ TRANSICOES_VALIDAS: set[tuple[StatusAmbulancia, StatusAmbulancia]] = {
     (StatusAmbulancia.DISPONIVEL, StatusAmbulancia.RESERVADA),
     (StatusAmbulancia.RESERVADA, StatusAmbulancia.A_CAMINHO),
     (StatusAmbulancia.A_CAMINHO, StatusAmbulancia.NO_LOCAL),
+    (StatusAmbulancia.NO_LOCAL, StatusAmbulancia.TRANSPORTANDO),
     (StatusAmbulancia.NO_LOCAL, StatusAmbulancia.RETORNANDO),
     (StatusAmbulancia.NO_LOCAL, StatusAmbulancia.DISPONIVEL),
+    (StatusAmbulancia.TRANSPORTANDO, StatusAmbulancia.RETORNANDO),
+    (StatusAmbulancia.TRANSPORTANDO, StatusAmbulancia.DISPONIVEL),
     (StatusAmbulancia.RETORNANDO, StatusAmbulancia.DISPONIVEL),
 }
 
@@ -67,6 +71,9 @@ class Chamado:
     despachado_em: float | None = None
     chegada_prevista_em: float | None = None  # despachado_em + ETA (para o mapa)
     chegada_em: float | None = None
+    transporte_em: float | None = None        # saiu do local rumo ao hospital
+    hospital_previsto_em: float | None = None # transporte_em + ETA ao hospital
+    hospital_id: str | None = None
     liberado_em: float | None = None
     ambulancia_id: str | None = None
     tentativas: int = 0

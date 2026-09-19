@@ -79,7 +79,7 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
     # ultimo fator > 0 visto; enquanto pausada a rodada guarda fator=0 e este valor restaura no despause
     app.state.fator_ativo = rodada_inicial.fator if rodada_inicial and rodada_inicial.fator > 0 else 1.0
     leitor = _LeitorEventos(Path(log_dir) / rodada_id) if log_dir and rodada_id else None
-    lista_bases = [{"id": b.id, "nome": b.nome, "lat": b.lat, "lon": b.lon} for b in bases.values()]
+    lista_bases = [{"id": b.id, "nome": b.nome, "lat": b.lat, "lon": b.lon, "tipo": b.tipo} for b in bases.values()]
 
     def snapshot() -> dict:
         rodada = repo.obter_rodada()
@@ -91,12 +91,16 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
             item = {"id": a.id, "lat": a.lat, "lon": a.lon, "status": str(a.status),
                     "base_id": a.base_id, "chamado_id": a.chamado_id, "worker_id": a.worker_id,
                     "destino": None, "despachado_em": None, "chegada_prevista_em": None,
-                    "chegada_em": None, "liberado_em": None}
+                    "chegada_em": None, "liberado_em": None, "hospital": None,
+                    "transporte_em": None, "hospital_previsto_em": None}
             c = chamados.get(a.chamado_id) if a.chamado_id else None
             if c:  # o front interpola a posicao entre a base e o chamado com estes tempos
+                h = bases.get(c.hospital_id) if c.hospital_id else None
                 item.update({"destino": {"lat": c.lat, "lon": c.lon}, "despachado_em": c.despachado_em,
                              "chegada_prevista_em": c.chegada_prevista_em, "chegada_em": c.chegada_em,
-                             "liberado_em": c.liberado_em})
+                             "liberado_em": c.liberado_em, "transporte_em": c.transporte_em,
+                             "hospital_previsto_em": c.hospital_previsto_em,
+                             "hospital": {"id": h.id, "nome": h.nome, "lat": h.lat, "lon": h.lon} if h else None})
             ambulancias.append(item)
         return {
             "agora_sim": agora,

@@ -6,6 +6,7 @@ import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 
+from samu_sim.core.geo import haversine_km
 from samu_sim.core.modelos import Base, StatusAmbulancia as SA, StatusChamado
 from samu_sim.core.relogio import Relogio
 from samu_sim.eventlog import EventLog
@@ -17,7 +18,8 @@ from samu_sim.roteador import Roteador
 class WorkerAmbulancia:
     def __init__(self, worker_id: str, fila_eventos: Fila, repo: Repositorio, relogio: Relogio,
                  roteador: Roteador, bases: dict[str, Base], eventlog: EventLog,
-                 atendimento_seg: tuple[float, float] = (600, 1200),
+                 atendimento_seg: tuple[float, float] = (1200, 1800),
+                 entrega_seg: tuple[float, float] = (480, 900),
                  max_simultaneas: int = 50, seed: int = 0, agora_real=time.time):
         self.worker_id = worker_id
         self._agora_real = agora_real
@@ -27,7 +29,9 @@ class WorkerAmbulancia:
         self._roteador = roteador
         self._bases = bases
         self._log = eventlog
-        self._atendimento = atendimento_seg
+        self._atendimento = atendimento_seg  # no local (literatura SAMU: ~20-30 min)
+        self._entrega = entrega_seg          # passagem do paciente no hospital (~8-15 min)
+        self._hospitais = [b for b in bases.values() if b.tipo == "hospital"]
         self._rng = random.Random(f"{seed}-{worker_id}")
         self._pool = ThreadPoolExecutor(max_workers=max_simultaneas, thread_name_prefix=worker_id)
         self._em_voo: set[Future] = set()
@@ -115,14 +119,40 @@ class WorkerAmbulancia:
 
         self._relogio.dormir_sim(self._rng.uniform(*self._atendimento))
 
+        # transporte ao hospital mais proximo (ciclo real do SAMU: a ambulancia so libera
+        # depois de entregar o paciente); sem hospital cadastrado, volta direto
+        posicao = (chamado.lat, chamado.lon)
+        hospital = self._hospital_mais_proximo(posicao)
+        if hospital is not None:
+            eta_h = self._roteador.eta(posicao, (hospital.lat, hospital.lon))
+            a = self._transicionar(amb_id, SA.NO_LOCAL, SA.TRANSPORTANDO)
+            chamado.transporte_em = self._relogio.agora_sim()
+            chamado.hospital_previsto_em = chamado.transporte_em + eta_h
+            chamado.hospital_id = hospital.id
+            self._repo.salvar_chamado(chamado)
+            self._log.registrar("transporte_iniciado", ambulancia_id=amb_id, chamado_id=ch_id,
+                                hospital_id=hospital.id, eta_seg=eta_h)
+            self._relogio.dormir_sim(eta_h)
+            self._log.registrar("hospital_chegou", ambulancia_id=amb_id, chamado_id=ch_id, hospital_id=hospital.id)
+            self._relogio.dormir_sim(self._rng.uniform(*self._entrega))
+            posicao = (hospital.lat, hospital.lon)
+            de = SA.TRANSPORTANDO
+        else:
+            de = SA.NO_LOCAL
+
         agora = self._relogio.agora_sim()
         chamado.liberado_em = agora
         chamado.status = StatusChamado.ATENDIDO
         self._repo.salvar_chamado(chamado)
-        a = self._transicionar(amb_id, SA.NO_LOCAL, SA.RETORNANDO)
+        a = self._transicionar(amb_id, de, SA.RETORNANDO, lat=posicao[0], lon=posicao[1])
         self._log.registrar("liberada", ambulancia_id=amb_id, chamado_id=ch_id)
 
         base = self._bases[a.base_id]
-        self._relogio.dormir_sim(self._roteador.eta((a.lat, a.lon), (base.lat, base.lon)))
+        self._relogio.dormir_sim(self._roteador.eta(posicao, (base.lat, base.lon)))
         self._transicionar(amb_id, SA.RETORNANDO, SA.DISPONIVEL,
                            lat=base.lat, lon=base.lon, chamado_id=None)
+
+    def _hospital_mais_proximo(self, p):
+        if not self._hospitais:
+            return None
+        return min(self._hospitais, key=lambda h: haversine_km(p[0], p[1], h.lat, h.lon))

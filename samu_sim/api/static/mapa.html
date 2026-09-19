@@ -189,6 +189,7 @@
         <div><em style="--c:var(--cam)">a caminho</em><span id="c-a_caminho">0</span></div>
         <div><em style="--c:var(--res)">reservada</em><span id="c-reservada">0</span></div>
         <div><em style="--c:var(--loc)">no local</em><span id="c-no_local">0</span></div>
+        <div><em style="--c:#26C6DA">ao hospital</em><span id="c-transportando">0</span></div>
         <div><em style="--c:var(--ret)">retornando</em><span id="c-retornando">0</span></div>
       </div>
     </section>
@@ -219,6 +220,7 @@
       <div><i style="--c:var(--disp)"></i>disponível</div>
       <div><i style="--c:var(--cam)"></i>a caminho</div>
       <div><i style="--c:var(--loc)"></i>no local</div>
+      <div><i style="--c:#26C6DA"></i>levando ao hospital</div>
       <div><i style="--c:var(--ret)"></i>retornando</div>
     </div>
   </div>
@@ -231,9 +233,9 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const CORES = {disponivel:'#3DDC97', reservada:'#FFC857', a_caminho:'#FF5A5F', no_local:'#B388FF', retornando:'#4FC3F7'};
-const NOMES = {disponivel:'disponível', reservada:'reservada', a_caminho:'a caminho', no_local:'no local', retornando:'retornando à base'};
-const ORDEM = ['disponivel','reservada','a_caminho','no_local','retornando'];
+const CORES = {disponivel:'#3DDC97', reservada:'#FFC857', a_caminho:'#FF5A5F', no_local:'#B388FF', transportando:'#26C6DA', retornando:'#4FC3F7'};
+const NOMES = {disponivel:'disponível', reservada:'reservada', a_caminho:'a caminho', no_local:'no local', transportando:'levando ao hospital', retornando:'retornando à base'};
+const ORDEM = ['disponivel','reservada','a_caminho','no_local','transportando','retornando'];
 const FATORES = [1, 5, 20, 50, 200];
 const META_SEG = 15 * 60;
 const PRI = {vermelho:'#FF5A5F', amarelo:'#FFC857', verde:'#3DDC97'};
@@ -261,10 +263,15 @@ function posicao(a, agora){
     const t = Math.min(1, Math.max(0, (agora - a.despachado_em) / (a.chegada_prevista_em - a.despachado_em)));
     return lerp([base.lat, base.lon], fim, t);
   }
+  if (a.status === 'transportando' && fim && a.hospital && a.transporte_em != null && a.hospital_previsto_em > a.transporte_em){
+    const t = Math.min(1, Math.max(0, (agora - a.transporte_em) / (a.hospital_previsto_em - a.transporte_em)));
+    return lerp(fim, [a.hospital.lat, a.hospital.lon], t);
+  }
   if (a.status === 'retornando' && base && fim && a.liberado_em != null){
+    const origem = a.hospital ? [a.hospital.lat, a.hospital.lon] : fim;
     const dur = Math.max(60, (a.chegada_prevista_em || 0) - (a.despachado_em || 0));
     const t = Math.min(1, Math.max(0, (agora - a.liberado_em) / dur));
-    return lerp(fim, [base.lat, base.lon], t);
+    return lerp(origem, [base.lat, base.lon], t);
   }
   return [a.lat, a.lon];
 }
@@ -398,11 +405,16 @@ function renderSeguido(d){
       etapas.push({cls:'', t:'No local'}); etapas.push({cls:'', t:'Concluído'});
     } else {
       etapas.push({cls:'feita', t:`Chegou ${q(c.chegada_em)}`, s:`tempo de resposta ${minutos(c.chegada_em - c.criado_em)}`});
-      if (c.liberado_em == null){
+      if (c.liberado_em == null && c.transporte_em == null){
         etapas.push({cls:'atual', t:'No local', s:`atendendo há ${minutos(agora - c.chegada_em)}`});
+        etapas.push({cls:'', t:'Ao hospital'}); etapas.push({cls:'', t:'Concluído'});
+      } else if (c.liberado_em == null){
+        etapas.push({cls:'feita', t:`No local ${q(c.chegada_em)}`, s:`${minutos(c.transporte_em - c.chegada_em)} de atendimento`});
+        const total = (c.hospital_previsto_em || 0) - c.transporte_em, dec = agora - c.transporte_em;
+        etapas.push({cls:'atual', t:'Levando ao hospital', s:`${(a && a.hospital) ? a.hospital.nome : c.hospital_id || ''} · chega em ${minutos(Math.max(0, (c.hospital_previsto_em || agora) - agora))}`, prog: total > 0 ? Math.min(100, Math.max(0, 100 * dec / total)) : 0});
         etapas.push({cls:'', t:'Concluído'});
       } else {
-        etapas.push({cls:'feita', t:`Atendido ${q(c.liberado_em)}`, s:`${minutos(c.liberado_em - c.chegada_em)} no local`});
+        etapas.push({cls:'feita', t:`Atendido ${q(c.liberado_em)}`, s:c.hospital_id ? `entregue no hospital · ${minutos(c.liberado_em - c.chegada_em)} desde a chegada` : `${minutos(c.liberado_em - c.chegada_em)} no local`});
         etapas.push({cls: a && a.status === 'retornando' ? 'atual' : 'feita', t: a && a.status === 'retornando' ? 'Ambulância voltando à base' : 'Concluído'});
       }
     }
@@ -423,7 +435,7 @@ setInterval(() => {
   const agora = agoraSim();
   $('hora').textContent = hhmm(agora);
   for (const a of ultimo.ambulancias){
-    if (a.status !== 'a_caminho' && a.status !== 'retornando') continue;
+    if (a.status !== 'a_caminho' && a.status !== 'retornando' && a.status !== 'transportando') continue;
     const p = posicao(a, agora);
     amb[a.id].setLatLng(p);
     if (rotas[a.id]) rotas[a.id].setLatLngs([p, [a.destino.lat, a.destino.lon]]);
@@ -452,6 +464,8 @@ function frase(e){
     case 'chamado_criado':      return {c:PRI[e.prioridade] || 'var(--cham)', m:`novo chamado <b>${e.chamado_id}</b> em ${e.bairro || '?'}${z}${e.prioridade ? ` <small>· ${e.prioridade}${e.tipo_chamado ? ', ' + e.tipo_chamado : ''}</small>` : ''}`};
     case 'despachada':          return {c:'var(--cam)',  m:`<b>${e.ambulancia_id}</b> despachada para ${e.chamado_id} <small>· chega em ${minutos(e.eta_seg)}</small>`};
     case 'chegou':              return {c:'var(--loc)',  m:`<b>${e.ambulancia_id}</b> chegou em ${e.chamado_id} <small>· resposta ${minutos(e.resposta_seg)}</small>`};
+    case 'transporte_iniciado': return {c:'#26C6DA',     m:`<b>${e.ambulancia_id}</b> levando paciente de ${e.chamado_id} ao hospital <small>· ${minutos(e.eta_seg)}</small>`};
+    case 'hospital_chegou':     return {c:'#26C6DA',     m:`<b>${e.ambulancia_id}</b> entregou o paciente em ${e.hospital_id}`};
     case 'liberada':            return {c:'var(--ret)',  m:`<b>${e.ambulancia_id}</b> liberada, voltando à base`};
     case 'sem_ambulancia':      return {c:'var(--res)',  m:`${e.chamado_id} aguarda: nenhuma ambulância livre`};
     case 'reserva_falhou':      return {c:'var(--sist)', s:1, m:`corrida perdida: outro despachante levou <b>${e.ambulancia_id}</b> <small>· tentando a próxima</small>`};
