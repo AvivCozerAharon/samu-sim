@@ -112,6 +112,13 @@
   .legenda-mapa div{display:flex;align-items:center;gap:8px;color:var(--apagado)}
   .legenda-mapa i{width:10px;height:10px;border-radius:50%;background:var(--c)}
   .legenda-mapa i.base{border-radius:1px;background:#4A5A6A}
+  .legenda-mapa i.hosp{border-radius:2px;background:#4A5A6A;position:relative}
+  .legenda-mapa i.hosp:after{content:"+";position:absolute;inset:0;color:#E8EEF4;font:700 10px/10px sans-serif;text-align:center}
+  .ico-hosp{width:16px;height:16px;border-radius:3px;background:#3B4B5C;border:1px solid #5A6C7E;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+  .ico-hosp i{position:absolute;background:#E8EEF4;left:50%;top:50%;transform:translate(-50%,-50%)}
+  .ico-hosp i:first-child{width:8px;height:2px}.ico-hosp i:last-child{width:2px;height:8px}
+  .ico-upa{width:10px;height:10px;border-radius:2px;background:#3B4B5C;border:1px solid #5A6C7E;box-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .leaflet-marker-icon.vazia .ico-hosp,.leaflet-marker-icon.vazia .ico-upa{border-color:#FF5A5F;box-shadow:0 0 0 2px rgba(255,90,95,.35)}
   .legenda-mapa i.cham{border-radius:0;background:none;color:var(--cham);font-style:normal;font-weight:600;line-height:10px;text-align:center}
   .legenda-mapa i.rota{border-radius:0;height:0;border-top:2px dashed var(--cam);background:none;width:14px}
   .mapa-wrap{position:relative;min-height:0}
@@ -214,7 +221,8 @@
     <div id="mapa"></div>
     <div id="seguir" class="vazio"><button id="seguirProx">Seguir o próximo chamado</button></div>
     <div class="legenda-mapa">
-      <div><i class="base"></i>base (hospital / UPA)</div>
+      <div><i class="hosp"></i>hospital de emergência (recebe pacientes)</div>
+      <div><i class="base" style="width:8px;height:8px;margin:0 1px"></i>UPA · borda vermelha = sem ambulância livre</div>
       <div><i class="cham">×</i>chamado (cor = gravidade: <span style="color:#FF5A5F">vermelho</span> <span style="color:#FFC857">amarelo</span> <span style="color:#3DDC97">verde</span>)</div>
       <div><i class="rota"></i>deslocamento até o chamado</div>
       <div><i style="--c:var(--disp)"></i>disponível</div>
@@ -250,6 +258,7 @@ let ultimo = null, recebidoEm = 0, pausada = false, basesDesenhadas = false;
 let seguindo = null, seguirCamera = true, esperandoProximo = false, seguindoDados = null;
 const bases = {}, amb = {}, rotas = {}, cham = {};
 
+function tooltipBase(b){ const f = b.frota || {total:0, livres:0}; return `<b>${b.nome}</b><br>${b.tipo === 'hospital' ? 'hospital de emergência' : 'UPA'} · ${f.livres} de ${f.total} ambulâncias livres`; }
 const hhmm = s => { s = Math.max(0, s % 86400); return String(Math.floor(s/3600)).padStart(2,'0') + ':' + String(Math.floor(s%3600/60)).padStart(2,'0'); };
 const minutos = v => v == null ? '–' : (v/60).toFixed(v < 600 ? 1 : 0) + ' min';
 const agoraSim = () => !ultimo ? 0 : ultimo.pausada ? ultimo.agora_sim : ultimo.agora_sim + (performance.now() - recebidoEm) / 1000 * ultimo.fator;
@@ -304,7 +313,14 @@ function aplicarEstado(e){
 
   if (!basesDesenhadas){ basesDesenhadas = true;
     for (const b of e.bases){ bases[b.id] = b;
-      L.rectangle([[b.lat-0.0035,b.lon-0.0035],[b.lat+0.0035,b.lon+0.0035]],{color:'#4A5A6A',weight:1,fillColor:'#4A5A6A',fillOpacity:.85}).bindTooltip(b.nome).addTo(mapa); } }
+      const hosp = b.tipo === 'hospital';
+      b.marker = L.marker([b.lat, b.lon], {icon: L.divIcon({className: '', iconSize: hosp ? [16,16] : [10,10], iconAnchor: hosp ? [8,8] : [5,5],
+        html: hosp ? '<div class="ico-hosp"><i></i><i></i></div>' : '<div class="ico-upa"></div>'}), zIndexOffset: -100})
+        .bindTooltip(() => tooltipBase(b), {direction: 'top', offset: [0, -8]}).addTo(mapa); } }
+  const porBase = {};
+  for (const a of e.ambulancias){ const s = porBase[a.base_id] || (porBase[a.base_id] = {total:0, livres:0}); s.total++; if (a.status === 'disponivel') s.livres++; }
+  for (const id in bases){ const s = porBase[id] || {total:0, livres:0}; bases[id].frota = s;
+    const el = bases[id].marker && bases[id].marker.getElement(); if (el) el.classList.toggle('vazia', s.total > 0 && s.livres === 0); }
 
   const cont = Object.fromEntries(ORDEM.map(s => [s, 0]));
   for (const a of e.ambulancias){
