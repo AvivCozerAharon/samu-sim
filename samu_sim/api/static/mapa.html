@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8"><title>samu-sim</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+ html,body,#mapa{height:100%;margin:0}
+ #painel{position:absolute;top:10px;right:10px;z-index:1000;background:#fff;padding:10px 14px;border-radius:6px;
+   font:13px/1.4 system-ui,sans-serif;box-shadow:0 1px 6px rgba(0,0,0,.3);min-width:230px}
+ #painel h1{font-size:15px;margin:0 0 6px}
+ #painel .num{font-weight:600}
+ .leg span{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 6px}
+ select,button{margin-top:6px}
+</style></head>
+<body><div id="mapa"></div>
+<div id="painel"><h1>samu-sim — Rio de Janeiro</h1>
+ <div>hora sim: <span class="num" id="hora">--:--</span> &nbsp; fator <span class="num" id="fator">-</span></div>
+ <div>P50 <span class="num" id="p50">-</span> · P90 <span class="num" id="p90">-</span> · pendentes <span class="num" id="pend">-</span></div>
+ <div>atendidos <span class="num" id="atend">-</span> / <span id="total">-</span></div>
+ <div class="leg" style="margin-top:6px">
+  <span style="background:#2e7d32"></span>disponível<span style="background:#f9a825"></span>reservada
+  <span style="background:#c62828"></span>a caminho<span style="background:#6a1b9a"></span>no local
+  <span style="background:#1565c0"></span>retornando</div>
+ <div>fator: <select id="selFator"><option>1</option><option>2</option><option>5</option><option>10</option><option selected>20</option><option>50</option><option>200</option></select>
+  <button id="btnPausa">pausar</button></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CORES={disponivel:'#2e7d32',reservada:'#f9a825',a_caminho:'#c62828',no_local:'#6a1b9a',retornando:'#1565c0'};
+const mapa=L.map('mapa').setView([-22.92,-43.40],11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(mapa);
+const amb={}, cham={}; let bases=null, pausada=false;
+function hhmm(s){s=Math.max(0,s%86400);return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor(s%3600/60)).padStart(2,'0');}
+function min(v){return v==null?'-':(v/60).toFixed(1)+' min';}
+async function estado(){
+  const e=await (await fetch('/estado')).json();
+  document.getElementById('hora').textContent=hhmm(e.agora_sim);
+  document.getElementById('fator').textContent=e.pausada?'pausado':e.fator;
+  pausada=e.pausada; document.getElementById('btnPausa').textContent=pausada?'continuar':'pausar';
+  if(!bases){bases=L.layerGroup().addTo(mapa);
+    const vistas=new Set();
+    for(const a of e.ambulancias){ if(vistas.has(a.base_id))continue; vistas.add(a.base_id);
+      L.rectangle([[a.lat-0.004,a.lon-0.004],[a.lat+0.004,a.lon+0.004]],{color:'#555',weight:1,fillOpacity:.6}).bindTooltip(a.base_id).addTo(bases);} }
+  for(const a of e.ambulancias){
+    if(!amb[a.id]) amb[a.id]=L.circleMarker([a.lat,a.lon],{radius:6,weight:1,color:'#222',fillOpacity:.95}).bindTooltip(a.id).addTo(mapa);
+    amb[a.id].setLatLng([a.lat,a.lon]).setStyle({fillColor:CORES[a.status]||'#999'}); }
+  const abertos=new Set();
+  for(const c of e.chamados_abertos){ abertos.add(c.id);
+    if(!cham[c.id]) cham[c.id]=L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:'<div style="color:#e65100;font:bold 18px sans-serif">×</div>',iconSize:[14,14]})}).bindTooltip(c.id+' ('+c.zona+')').addTo(mapa); }
+  for(const id in cham){ if(!abertos.has(id)){mapa.removeLayer(cham[id]);delete cham[id];} }
+}
+async function metricas(){
+  const m=await (await fetch('/metricas')).json();
+  document.getElementById('p50').textContent=min(m.resposta.p50);
+  document.getElementById('p90').textContent=min(m.resposta.p90);
+  document.getElementById('pend').textContent=m.fila.pendentes;
+  document.getElementById('atend').textContent=m.atendidos; document.getElementById('total').textContent=m.total;
+}
+async function controle(body){await fetch('/controle',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); estado();}
+document.getElementById('selFator').onchange=e=>controle({fator:+e.target.value});
+document.getElementById('btnPausa').onclick=()=>controle({pausada:!pausada});
+estado(); metricas(); setInterval(estado,1000); setInterval(metricas,5000);
+</script></body></html>

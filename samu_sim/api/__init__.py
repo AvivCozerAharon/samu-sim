@@ -1,8 +1,11 @@
 """API de observacao e controle da simulacao."""
+import asyncio
 import time
 from dataclasses import asdict
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from samu_sim.api.reaper import Reaper
@@ -14,6 +17,9 @@ from samu_sim.infra.fila import Fila
 from samu_sim.infra.repositorio import Repositorio
 
 
+_STATIC = Path(__file__).parent / "static"
+
+
 class Controle(BaseModel):
     fator: float | None = Field(default=None, ge=0)
     pausada: bool | None = None
@@ -21,7 +27,8 @@ class Controle(BaseModel):
 
 
 def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], relogio: Relogio,
-              eventlog: EventLog, agora_real=time.time, reaper_timeout_seg: float = 120.0) -> FastAPI:
+              eventlog: EventLog, agora_real=time.time, reaper_timeout_seg: float = 120.0,
+              intervalo_ws_seg: float = 1.0) -> FastAPI:
     app = FastAPI(title="samu-sim")
     app.state.reaper = Reaper(repo, fila_chamados, bases, eventlog, reaper_timeout_seg, agora_real)
     app.state.relogio = relogio
@@ -46,6 +53,21 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
         }
 
     app.state.snapshot = snapshot
+
+    @app.get("/", include_in_schema=False)
+    def mapa():
+        return FileResponse(_STATIC / "mapa.html", media_type="text/html")
+
+    @app.websocket("/ws/estado")
+    async def ws_estado(ws: WebSocket):
+        """Mesmo snapshot do /estado, empurrado periodicamente (para um front React futuro)."""
+        await ws.accept()
+        try:
+            while True:
+                await ws.send_json(await asyncio.to_thread(snapshot))
+                await asyncio.sleep(intervalo_ws_seg)
+        except WebSocketDisconnect:
+            pass
 
     @app.get("/saude")
     def saude():
