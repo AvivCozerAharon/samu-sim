@@ -59,10 +59,45 @@ docker compose up -d localstack
 AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test python -m pytest -q -m integration
 ```
 
+## Roteamento (D3 — OSRM na malha viária real do Rio)
+
+Três implementações da mesma interface `Roteador.eta(origem, destino)`:
+
+| Roteador | Como | Quando usar |
+|---|---|---|
+| `haversine` | linha reta a 30 km/h | dia 1, testes, fallback |
+| `osrm` | HTTP no OSRM (malha OSM do Rio), timeout 2 s → fallback haversine, evento `roteador_fallback` | local, com `--profile osrm` |
+| `matriz` | lookup em `dados/matriz_eta.json` (bases × centróides de bairro, gerado pelo OSRM `table`) + trecho de aproximação | AWS t3.micro (sem container de 1 GB); pontos a > 1,5 km de um centróide caem em haversine |
+
+```bash
+bash scripts/preparar_osrm.sh                      # uma vez: extrato BBBike do Rio (36 MB) + osrm-extract/partition/customize (~2 min)
+docker compose --profile osrm up -d osrm
+python scripts/gerar_matriz_osrm.py                # regenera dados/matriz_eta.json
+ROTEADOR=osrm docker compose --profile osrm up -d  # stack inteira roteando pelo OSRM
+python scripts/comparar_roteadores.py --fator 3000 --duracao-sim 43200 --ambulancias 50 --chamados-por-dia 400
+```
+
+### Haversine × OSRM × matriz (mesma seed, 12 h simuladas, 50 ambulâncias, 400 chamados/dia)
+
+| roteador | P50 | P90 | P90 Barra | P90 Norte | P90 **Oeste** | P90 Sul |
+|---|---|---|---|---|---|---|
+| haversine | 8,5 min | 15,5 min | 24 | 12 | **27** | 12 |
+| osrm | 9,1 min | 17,6 min | 21 | 12 | **33** | 14 |
+| matriz | 10,2 min | 18,5 min | 23 | 13 | **33** | 13 |
+
+A linha reta subestima o P90 global em ~14% e o da Zona Oeste em **22%** — é onde a malha
+(Av. Brasil, Santa Cruz, Guaratiba) mais diverge da reta. A matriz reproduz o OSRM a ~5%,
+o que valida usá-la na AWS. Política `menor_eta_cobertura` (não esvaziar uma base) fica
+para os experimentos do D5.
+
+**Gargalo medido:** `menor_eta` avalia todas as candidatas; 40 chamadas `/route` = 210 ms
+reais = 17 min *simulados* a fator 5000 (a primeira comparação saiu com P50 de 128 min por
+isso). Solução: `Roteador.etas_de(origens, destino)` em lote — 1 chamada `/table` = 34 ms.
+
 ## Estado
 
 - [x] D1: núcleo em memória (relógio, fila, repositório com lock otimista, políticas, serviços, métricas)
 - [x] D2: docker compose + LocalStack (SQS/DynamoDB), reaper, análise de rodada
-- [ ] D3: OSRM + política `menor_eta` real + matriz pré-computada
+- [x] D3: OSRM + política `menor_eta` real + matriz pré-computada
 - [ ] D4: Terraform + EC2 + mapa
 - [ ] D5: experimentos A (políticas) e B (frota)
