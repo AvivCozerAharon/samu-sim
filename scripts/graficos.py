@@ -80,6 +80,36 @@ def grafico_b(res: dict, saida: Path) -> None:
     fig.savefig(saida / "b_frota_p90.png", dpi=150)
 
 
+def grafico_c(turnos: dict, saida: Path) -> None:
+    ts = turnos["turnos"]
+    fig, ax = plt.subplots(figsize=(9, 4.2))
+    xs = [t["numero"] for t in ts]
+    js = [t["J"] for t in ts]
+    cores = ["#4FC3F7" if t["numero"] == 1 else ("#3DDC97" if t["aceito"] else "#4A5A6A") for t in ts]
+    ax.bar(xs, js, color=cores, width=.7)
+    melhor = []
+    m = js[0]
+    for t in ts:
+        if t["aceito"]:
+            m = t["J"]
+        melhor.append(m)
+    ax.plot(xs, melhor, color="#FFC857", lw=2, marker="o", ms=4, label="melhor J até o turno")
+    for t in ts:
+        if t["aceito"] and t["numero"] > 1:
+            ax.annotate("aceito", (t["numero"], t["J"]), textcoords="offset points", xytext=(0, 4),
+                        ha="center", fontsize=8, color="#3DDC97")
+    ax.set_xticks(xs)
+    ax.set_xlabel("turno")
+    ax.set_ylabel("J = 3·P90 vermelho + P90 amarelo + ½·P90 verde (min)")
+    ax.set_ylim(min(js) * 0.9, max(js) * 1.05)
+    c = turnos["config"]
+    ax.set_title(f"C · turnos que aprendem — {c['ambulancias']} ambulâncias, {c['chamados_por_dia']} chamados/dia, "
+                 f"1 movimento por turno", loc="left", fontsize=11)
+    ax.legend(loc="upper right")
+    fig.tight_layout()
+    fig.savefig(saida / "c_turnos.png", dpi=150)
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--entrada", default="docs/experimentos/resultados.json")
@@ -91,6 +121,9 @@ def main() -> None:
     estilo()
     grafico_a(res, saida)
     grafico_b(res, saida)
+    turnos = Path(a.entrada).parent / "turnos.json"
+    if turnos.exists():
+        grafico_c(json.loads(turnos.read_text(encoding="utf-8")), saida)
     print(f"graficos em {saida}/")
 
 

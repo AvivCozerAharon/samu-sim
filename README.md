@@ -46,6 +46,37 @@ uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memóri
 **Validação distribuída:** o mesmo cenário rodado na AWS — EC2 com 6 containers, SQS e DynamoDB
 reais — reproduziu o modelo em memória com < 2 % de diferença (`scripts/experimento_aws.sh`).
 
+## Prioridade e turnos que aprendem (D7)
+
+![turnos](docs/img/c_turnos.png)
+
+**Prioridade.** Cada chamado nasce com a classificação do regulador (vermelho 10 % / amarelo 30 % /
+verde 60 %). São três filas SQS; o despachante só desce de nível quando a fila acima está vazia,
+e o reaper devolve o chamado à fila da sua prioridade. A métrica que importa passa a ser o
+**P90 dos vermelhos**, e o objetivo dos experimentos é `J = 3·P90(vermelho) + P90(amarelo) + ½·P90(verde)`.
+
+**Turnos.** `scripts/turnos.py` roda o dia simulado repetidamente. A cada turno o otimizador lê o
+resultado e escreve o diagnóstico em linguagem simples — *"Zona Barra tem o pior resultado: P90 21 min;
+UPA Paciência está ociosa 98 % do tempo com 2 ambulâncias; mover 1 ambulância de UPA Paciência para
+UPA Jacarepaguá (cobre 607 mil hab. num raio de 5 km)"* — aplica o movimento, mede, e **mantém se J
+caiu ≥ 2 %, desfaz se não** (hill-climbing com memória do que já tentou). Resultado em 10 turnos com a
+frota real de 73: **J 80,9 → 72,6 (−10 %)**, P90 global 16,4 → 14,2 min, P90 dos vermelhos 19,0 → 17,2
+min, com 3 movimentos aceitos (Paciência e Vila Kennedy → UPA Jacarepaguá; Evandro Freire → Lourenço
+Jorge) e 6 rejeitados. A Barra continua a zona pior servida (4 bases para 460 mil hab.) — o próximo
+ganho é uma base nova, não realocação.
+
+A alocação vencedora fica em `dados/alocacao.json` e o bootstrap a usa na AWS; o console mostra a
+trajetória (`GET /turnos`).
+
+**Isto é aprendizado de máquina?** Não, e o README diz isso de propósito: é *otimização guiada por
+dados* — cada decisão tem uma justificativa que dá para narrar e auditar. Onde ML entraria de verdade:
+(1) previsão de demanda por zona × hora sobre o event log, para reposicionar ambulâncias livres ao
+longo do dia (com dados sintéticos o modelo só aprenderia a curva que eu mesmo escrevi; o valor é o
+pipeline, que com a série real do SAMU-RJ aprenderia padrões reais); (2) triagem automática a partir
+da ligação — exige dados reais de chamadas. Aprender a política de despacho com RL seria a versão
+vistosa e a que eu não faria: caro de treinar num simulador em tempo real acelerado e impossível de
+defender em 35 minutos.
+
 ## Decisões de arquitetura (e o que mudou)
 
 | Decisão | Por quê | O que aprendi |
@@ -65,9 +96,10 @@ reais — reproduziu o modelo em memória com < 2 % de diferença (`scripts/expe
 - **Fargate + ALB** no lugar da EC2 única; **WebSocket + React** no lugar do polling.
 - **Dados reais** do Data.Rio (bairros/UPAs/SAMU) no lugar dos 19 bairros e 10 bases-proxy.
 - **Machine learning sobre o event log**: previsão de demanda por zona × hora para
-  *reposicionar* ambulâncias livres (a `Politica` é uma interface; uma `PoliticaML` entra sem
-  tocar no resto); e triagem/prioridade de chamados.
-- Experimento C: onde abrir 1 base nova para maximizar a queda do P90 na Zona Oeste.
+  *reposicionar* ambulâncias livres ao longo do dia (a `Politica` é uma interface; uma `PoliticaML`
+  entra sem tocar no resto).
+- Experimento D: onde abrir 1 base nova na Barra/Jacarepaguá (o otimizador de turnos já mostrou que
+  realocar não resolve a zona).
 
 ---
 
@@ -202,3 +234,4 @@ caminho → no local → concluído) com a câmera enquadrando. Estado também p
 - [x] D4: Terraform + EC2 + mapa (console ao vivo, modo seguir)
 - [x] D5: experimentos A (políticas) e B (frota), validação na AWS, gráficos
 - [x] D6: dados reais (Censo 2022, hospitais/UPAs, estatísticas do SAMU-RJ), gravidade, ciclo com hospital
+- [x] D7: filas por prioridade, otimizador de turnos (alocação por base), console de turnos
