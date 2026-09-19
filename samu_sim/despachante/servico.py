@@ -59,6 +59,7 @@ class Despachante:
             chamado.status = StatusChamado.DESPACHADO
             chamado.ambulancia_id = reservada.id
             chamado.despachado_em = agora
+            chamado.chegada_prevista_em = agora + eta
             self._repo.salvar_chamado(chamado)
             self._filas_eventos[reservada.worker_id].publicar({
                 "tipo": "despachada", "chamado_id": chamado_id,

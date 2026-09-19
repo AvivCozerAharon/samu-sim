@@ -113,3 +113,12 @@ def test_reserva_grava_heartbeat_para_o_reaper_nao_liberar_cedo():
     publicar_chamado(fila, repo)
     d.processar_lote()
     assert repo.obter_ambulancia("amb-0").heartbeat_em == 4242.0
+
+
+def test_despacho_grava_chegada_prevista():
+    relogio, repo, fila, filas_ev, log, d = montar()
+    publicar_chamado(fila, repo)
+    d.processar_lote()
+    c = repo.obter_chamado("ch-1")
+    ev = filas_ev["w0"].receber()[0].corpo
+    assert c.chegada_prevista_em == c.despachado_em + ev["eta_seg"]

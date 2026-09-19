@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import uuid
+import tempfile
 from pathlib import Path
 
 import uvicorn
@@ -17,7 +18,7 @@ from samu_sim.core.modelos import Rodada  # noqa: E402
 from samu_sim.core.relogio import Relogio  # noqa: E402
 from samu_sim.core.runtime import SincronizadorRelogio, loop_servico  # noqa: E402
 from samu_sim.despachante.servico import Despachante  # noqa: E402
-from samu_sim.eventlog import EventLogMemoria  # noqa: E402
+from samu_sim.eventlog import EventLogJsonl  # noqa: E402
 from samu_sim.gerador.demanda import GeradorChamados, carregar_bairros, carregar_bases  # noqa: E402
 from samu_sim.gerador.servico import ServicoGerador  # noqa: E402
 from samu_sim.infra.fila import FilaMemoria  # noqa: E402
@@ -52,7 +53,8 @@ def main() -> None:
     filas_ev = {"w0": FilaMemoria(), "w1": FilaMemoria()}
     rot = criar_roteador(a.roteador, cfg)
     bases_por_id = {b.id: b for b in bases}
-    log = lambda s: EventLogMemoria(relogio, s, rodada_id)  # noqa: E731
+    log_dir = Path(tempfile.gettempdir()) / "samu-sim-dev"
+    log = lambda s: EventLogJsonl(log_dir, relogio, s, rodada_id)  # noqa: E731
 
     chamados = []
     for dia in range(7):
@@ -70,7 +72,7 @@ def main() -> None:
     for w in workers:
         threading.Thread(target=loop_servico, args=(w.processar_lote, parar, 0.05), daemon=True).start()
 
-    app = criar_app(repo, fila, bases_por_id, relogio, log("api"))
+    app = criar_app(repo, fila, bases_por_id, relogio, log("api"), log_dir=log_dir, rodada_id=rodada_id)
     print(f"samu-sim dev: http://localhost:{a.porta}/  (fator {a.fator}, {a.ambulancias} ambulancias, {a.politica}, {a.roteador})")
     uvicorn.run(app, host="127.0.0.1", port=a.porta, log_level="warning")
     parar.set()
