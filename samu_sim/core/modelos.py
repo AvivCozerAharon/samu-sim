@@ -61,6 +61,8 @@ class Chamado:
     bairro: str
     zona: str
     criado_em: float
+    prioridade: str = "verde"  # vermelho (risco de vida) | amarelo (urgente) | verde (pouco urgente)
+    tipo: str = "clinico"      # clinico | trauma
     status: StatusChamado = StatusChamado.PENDENTE
     despachado_em: float | None = None
     chegada_prevista_em: float | None = None  # despachado_em + ETA (para o mapa)

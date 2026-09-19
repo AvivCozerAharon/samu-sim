@@ -214,7 +214,7 @@
     <div id="seguir" class="vazio"><button id="seguirProx">Seguir o próximo chamado</button></div>
     <div class="legenda-mapa">
       <div><i class="base"></i>base (hospital / UPA)</div>
-      <div><i class="cham">×</i>chamado aguardando</div>
+      <div><i class="cham">×</i>chamado (cor = gravidade: <span style="color:#FF5A5F">vermelho</span> <span style="color:#FFC857">amarelo</span> <span style="color:#3DDC97">verde</span>)</div>
       <div><i class="rota"></i>deslocamento até o chamado</div>
       <div><i style="--c:var(--disp)"></i>disponível</div>
       <div><i style="--c:var(--cam)"></i>a caminho</div>
@@ -236,6 +236,7 @@ const NOMES = {disponivel:'disponível', reservada:'reservada', a_caminho:'a cam
 const ORDEM = ['disponivel','reservada','a_caminho','no_local','retornando'];
 const FATORES = [1, 5, 20, 50, 200];
 const META_SEG = 15 * 60;
+const PRI = {vermelho:'#FF5A5F', amarelo:'#FFC857', verde:'#3DDC97'};
 const ZONAS = ['Centro','Sul','Norte','Barra','Oeste'];
 const $ = id => document.getElementById(id);
 
@@ -278,7 +279,7 @@ function popupAmb(a){
 }
 function popupCham(c){
   const agora = agoraSim();
-  let linhas = `<dt>bairro</dt><dd>${c.bairro} (${c.zona})</dd><dt>aberto há</dt><dd>${minutos(agora - c.criado_em)}</dd>`;
+  let linhas = `<dt>bairro</dt><dd>${c.bairro} (${c.zona})</dd>${c.prioridade ? `<dt>gravidade</dt><dd>${c.prioridade}${c.tipo ? ', ' + c.tipo : ''}</dd>` : ''}<dt>aberto há</dt><dd>${minutos(agora - c.criado_em)}</dd>`;
   linhas += c.ambulancia_id ? `<dt>ambulância</dt><dd>${c.ambulancia_id}</dd>` : `<dt>ambulância</dt><dd>aguardando despacho</dd>`;
   if (c.chegada_prevista_em && !c.chegada_em) linhas += `<dt>chega em</dt><dd>${minutos(Math.max(0, c.chegada_prevista_em - agora))}</dd>`;
   if (c.chegada_em) linhas += `<dt>resposta</dt><dd>${minutos(c.chegada_em - c.criado_em)}</dd>`;
@@ -318,7 +319,8 @@ function aplicarEstado(e){
 
   const abertos = new Set();
   for (const c of e.chamados_abertos){ abertos.add(c.id);
-    if (!cham[c.id]){ cham[c.id] = L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:'<div style="color:#FF8A3D;font:600 20px/14px IBM Plex Sans,sans-serif;text-shadow:0 0 6px rgba(0,0,0,.8)">×</div>',iconSize:[14,14],iconAnchor:[7,7]})}).addTo(mapa);
+    if (!cham[c.id]){ const cor = PRI[c.prioridade] || '#FF8A3D';
+      cham[c.id] = L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:`<div style="color:${cor};font:600 20px/14px IBM Plex Sans,sans-serif;text-shadow:0 0 6px rgba(0,0,0,.8)">×</div>`,iconSize:[14,14],iconAnchor:[7,7]})}).addTo(mapa);
       cham[c.id].on('click', () => seguir(c.id)); }
     cham[c.id].dados = c; cham[c.id].setOpacity(c.ambulancia_id ? .55 : 1); }
   for (const id in cham) if (!abertos.has(id)){ mapa.removeLayer(cham[id]); delete cham[id]; }
@@ -382,7 +384,7 @@ function renderSeguido(d){
   const c = d.chamado, a = d.ambulancia, agora = agoraSim();
   const q = ts => ts != null ? `<span class="q">${hhmm(ts)}</span>` : '';
   const etapas = [];
-  etapas.push({cls:'feita', t:`Chamado aberto ${q(c.criado_em)}`, s:`${c.bairro} · ${c.zona}`});
+  etapas.push({cls:'feita', t:`Chamado aberto ${q(c.criado_em)}`, s:`${c.bairro} · ${c.zona}${c.prioridade ? ' · ' + c.prioridade + (c.tipo ? ', ' + c.tipo : '') : ''}`});
   if (c.despachado_em == null){
     etapas.push({cls:'atual', t:'Aguardando ambulância', s:`na fila há ${minutos(agora - c.criado_em)}`});
     etapas.push({cls:'', t:'A caminho'}); etapas.push({cls:'', t:'No local'}); etapas.push({cls:'', t:'Concluído'});
@@ -447,7 +449,7 @@ let ultimoTs = -1;
 function frase(e){
   const z = e.zona ? ` <small>· ${e.zona}</small>` : '';
   switch (e.tipo){
-    case 'chamado_criado':      return {c:'var(--cham)', m:`novo chamado <b>${e.chamado_id}</b> em ${e.bairro || '?'}${z}`};
+    case 'chamado_criado':      return {c:PRI[e.prioridade] || 'var(--cham)', m:`novo chamado <b>${e.chamado_id}</b> em ${e.bairro || '?'}${z}${e.prioridade ? ` <small>· ${e.prioridade}${e.tipo_chamado ? ', ' + e.tipo_chamado : ''}</small>` : ''}`};
     case 'despachada':          return {c:'var(--cam)',  m:`<b>${e.ambulancia_id}</b> despachada para ${e.chamado_id} <small>· chega em ${minutos(e.eta_seg)}</small>`};
     case 'chegou':              return {c:'var(--loc)',  m:`<b>${e.ambulancia_id}</b> chegou em ${e.chamado_id} <small>· resposta ${minutos(e.resposta_seg)}</small>`};
     case 'liberada':            return {c:'var(--ret)',  m:`<b>${e.ambulancia_id}</b> liberada, voltando à base`};

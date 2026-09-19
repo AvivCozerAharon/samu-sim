@@ -106,6 +106,7 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
             "bases": lista_bases,
             "ambulancias": ambulancias,
             "chamados_abertos": [{"id": c.id, "lat": c.lat, "lon": c.lon, "zona": c.zona, "bairro": c.bairro,
+                                  "prioridade": c.prioridade, "tipo": c.tipo,
                                   "status": str(c.status), "criado_em": c.criado_em,
                                   "ambulancia_id": c.ambulancia_id, "despachado_em": c.despachado_em,
                                   "chegada_prevista_em": c.chegada_prevista_em, "chegada_em": c.chegada_em}
