@@ -129,3 +129,14 @@ def test_liberar_ambulancia_forca_disponivel_de_qualquer_estado():
     assert b.versao == a.versao + 1
     with pytest.raises(ConflitoVersao):
         r.liberar_ambulancia("amb-1", a.versao, lat=0, lon=0)
+
+
+def test_atualizar_posicao_so_se_disponivel():
+    r = RepositorioMemoria()
+    r.salvar_ambulancia(amb())
+    assert r.atualizar_posicao_se_disponivel("amb-1", -1.0, -2.0) is True
+    a = r.obter_ambulancia("amb-1")
+    assert (a.lat, a.lon) == (-1.0, -2.0) and a.versao == 0
+    r.reservar_ambulancia("amb-1", 0, "ch-1")
+    assert r.atualizar_posicao_se_disponivel("amb-1", -3.0, -4.0) is False
+    assert r.obter_ambulancia("amb-1").lat == -1.0
