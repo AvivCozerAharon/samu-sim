@@ -45,8 +45,8 @@ Atualizado em 2026-09-19 (D6).
   são minoria; a divisão exata é **estimativa** compatível com a classificação do regulador.
 - `tipo`: trauma 30 % de dia e 48 % entre 22 h e 4 h (média ≈ 35 %); clínico o restante. Perfis de
   atendimento do SAMU em capitais: 48–60 % clínicos, ~33 % trauma
-  ([SciELO](https://www.scielo.br/j/rgenf/a/9pJCzdb5cBGwymtLxHSf8QK/?lang=pt)). Ainda **não influencia**
-  o despacho (fica para o D7: fila por prioridade).
+  ([SciELO](https://www.scielo.br/j/rgenf/a/9pJCzdb5cBGwymtLxHSf8QK/?lang=pt)). Influencia o despacho:
+  três filas, vermelho → amarelo → verde (D7).
 
 ## Ciclo da ambulância — **calibrado com literatura**
 
