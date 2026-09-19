@@ -13,6 +13,8 @@ x-servico: &servico
     CHAMADOS_POR_DIA: ${CHAMADOS_POR_DIA:-300}
     SEED: ${SEED:-42}
     RODADA_ID: ${RODADA_ID:-local}
+    ROTEADOR: ${ROTEADOR:-haversine}
+    OSRM_URL: http://osrm:5000
   volumes:
     - ./logs:/logs
   depends_on:
@@ -68,3 +70,18 @@ services:
     <<: *servico
     command: python -m samu_sim.api
     ports: ["8000:8000"]
+
+  # opcional (so local): docker compose --profile osrm up -d osrm
+  # exige dados/osrm/ preparado por scripts/preparar_osrm.sh
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    profiles: ["osrm"]
+    command: osrm-routed --algorithm mld --max-table-size 1000 /data/rio.osrm
+    volumes:
+      - ./dados/osrm:/data
+    ports: ["5000:5000"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- 'http://localhost:5000/route/v1/driving/-43.18,-22.90;-43.19,-22.91' | grep -q Ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
