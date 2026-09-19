@@ -21,7 +21,7 @@ def main() -> None:
     SincronizadorRelogio(relogio, infra.repo, cfg.sync_relogio_seg, parar).iniciar()
     log = EventLogJsonl(cfg.log_dir, relogio, nome, cfg.rodada_id)
     w = WorkerAmbulancia(cfg.worker_id, infra.filas_eventos[cfg.worker_id], infra.repo, relogio,
-                         criar_roteador(rodada.roteador), infra.bases, log, seed=rodada.seed)
+                         criar_roteador(rodada.roteador, cfg), infra.bases, log, seed=rodada.seed)
     w.iniciar_heartbeat(cfg.heartbeat_seg, parar)
     logging.info(f"{nome}: pronto (heartbeat a cada {cfg.heartbeat_seg}s)")
     loop_servico(w.processar_lote, parar, ocioso_seg=0.0)

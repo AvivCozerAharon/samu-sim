@@ -9,6 +9,7 @@ from collections import Counter
 from pathlib import Path
 
 from samu_sim.ambulancia.servico import WorkerAmbulancia
+from samu_sim.core.config import Config
 from samu_sim.core.metricas import calcular
 from samu_sim.core.modelos import Ambulancia, Base, Rodada
 from samu_sim.core.relogio import Relogio
@@ -36,7 +37,8 @@ def montar_frota(bases: list[Base], n_ambulancias: int, n_workers: int) -> list[
 def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
           politica: str = "mais_proxima", roteador: str = "haversine", seed: int = 42,
           chamados_por_dia: int = 300, n_despachantes: int = 2, n_workers: int = 2,
-          visibilidade_seg: float = 30.0, log_dir: str | None = None) -> dict:
+          visibilidade_seg: float = 30.0, log_dir: str | None = None,
+          cfg: Config | None = None) -> dict:
     rodada_id = uuid.uuid4().hex[:8]
     relogio = Relogio(fator=fator)
     repo = RepositorioMemoria()
@@ -61,7 +63,7 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
 
     fila_chamados = FilaMemoria(visibilidade_seg=visibilidade_seg)
     filas_eventos = {f"w{k}": FilaMemoria(visibilidade_seg=visibilidade_seg) for k in range(n_workers)}
-    rot = criar_roteador(roteador)
+    rot = criar_roteador(roteador, cfg)
     bases_por_id = {b.id: b for b in bases}
 
     chamados = GeradorChamados(bairros, seed, chamados_por_dia).gerar_dia(0)
@@ -108,6 +110,7 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
                    "seed": seed, "n_ambulancias": n_ambulancias, "duracao_sim_seg": duracao_sim_seg},
         "metricas": calcular(repo.listar_chamados()),
         "eventos": dict(eventos),
+        "roteador_fallbacks": getattr(rot, "fallbacks", 0),
     }
 
 
@@ -121,9 +124,12 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--chamados-por-dia", type=int, default=300)
     p.add_argument("--log-dir", default=None, help="grava event log JSONL nesta pasta")
+    p.add_argument("--osrm-url", default="http://localhost:5000")
+    p.add_argument("--matriz", default="dados/matriz_eta.json")
     a = p.parse_args()
+    cfg = Config(osrm_url=a.osrm_url, matriz_path=a.matriz)
     r = rodar(a.fator, a.duracao_sim, a.ambulancias, a.politica, a.roteador, a.seed,
-              a.chamados_por_dia, log_dir=a.log_dir)
+              a.chamados_por_dia, log_dir=a.log_dir, cfg=cfg)
     print(json.dumps(r, indent=2, ensure_ascii=False))
 
 
