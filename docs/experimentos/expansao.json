@@ -1,0 +1,2072 @@
+{
+ "config": {
+  "extra": 2,
+  "seeds_triagem": [
+   42
+  ],
+  "seeds_final": [
+   42,
+   7,
+   2024,
+   11,
+   99
+  ],
+  "duracao_triagem": 43200,
+  "duracao_final": 86400,
+  "fator": 2000,
+  "flags": {
+   "transito": false,
+   "reposicionamento": false
+  },
+  "n_base": 73,
+  "controle_base": "UPA Engenho Novo",
+  "tempo_real_seg": 1653
+ },
+ "baseline": {
+  "cenario": {
+   "nome": "atual (73)",
+   "n_ambulancias": 73,
+   "politica": "menor_eta",
+   "alocacao": {
+    "base-01": 2,
+    "base-02": 2,
+    "base-03": 2,
+    "base-04": 3,
+    "base-05": 2,
+    "base-06": 1,
+    "base-07": 2,
+    "base-08": 2,
+    "base-09": 2,
+    "base-10": 2,
+    "base-11": 2,
+    "base-12": 2,
+    "base-13": 2,
+    "base-14": 2,
+    "base-15": 2,
+    "base-16": 2,
+    "base-17": 2,
+    "base-18": 2,
+    "base-19": 2,
+    "base-20": 2,
+    "base-21": 2,
+    "base-22": 1,
+    "base-23": 2,
+    "base-24": 2,
+    "base-25": 2,
+    "base-26": 2,
+    "base-27": 1,
+    "base-28": 2,
+    "base-29": 2,
+    "base-30": 2,
+    "base-31": 1,
+    "base-32": 1,
+    "base-33": 1,
+    "base-34": 1,
+    "base-35": 1,
+    "base-36": 3,
+    "base-37": 1,
+    "base-38": 1,
+    "base-39": 1,
+    "base-40": 1,
+    "base-41": 1,
+    "base-42": 1,
+    "base-43": 1
+   },
+   "bases_extra": [],
+   "transito": false,
+   "reposicionamento": false
+  },
+  "seeds": [
+   42,
+   7,
+   2024,
+   11,
+   99
+  ],
+  "duracao_sim_seg": 86400,
+  "chamados_por_dia": 600,
+  "por_seed": [
+   {
+    "seed": 42,
+    "p90": 848.2233721062527,
+    "p50": 433.72721286246815,
+    "pendentes": 0,
+    "p90_vermelho": 1027.5941857492508,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 630.0093737639734,
+    "Sul": 659.4762981405061,
+    "Norte": 611.8625199791189,
+    "Barra": 1138.4166156191495,
+    "Oeste": 633.5736778450215
+   },
+   {
+    "seed": 7,
+    "p90": 874.065659637096,
+    "p50": 430.50818452041494,
+    "pendentes": 0,
+    "p90_vermelho": 770.9156570661272,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 632.8638835073167,
+    "Sul": 590.5635910641064,
+    "Norte": 742.9506606753071,
+    "Barra": 1208.3339805155558,
+    "Oeste": 797.1639208675375
+   },
+   {
+    "seed": 2024,
+    "p90": 879.8528284253605,
+    "p50": 431.6962224087868,
+    "pendentes": 0,
+    "p90_vermelho": 1060.8846580873178,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 686.2893485050605,
+    "Sul": 728.1475593041337,
+    "Norte": 689.0313517807554,
+    "Barra": 1192.8313577760614,
+    "Oeste": 627.0561964153457
+   },
+   {
+    "seed": 11,
+    "p90": 828.4483882622617,
+    "p50": 433.7845460929093,
+    "pendentes": 0,
+    "p90_vermelho": 1018.1096840076478,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 724.0741307033611,
+    "Sul": 552.703151804945,
+    "Norte": 680.9373735265144,
+    "Barra": 1150.0635251750239,
+    "Oeste": 594.5610104379886
+   },
+   {
+    "seed": 99,
+    "p90": 811.8158214144288,
+    "p50": 419.1231936489057,
+    "pendentes": 0,
+    "p90_vermelho": 744.0818167496327,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 721.2247843511489,
+    "Sul": 557.1378914602534,
+    "Norte": 642.5516766722372,
+    "Barra": 1074.5831295588462,
+    "Oeste": 578.1602980579657
+   }
+  ],
+  "resumo": {
+   "p90": {
+    "media": 848.4812139690799,
+    "baixo": 825.1218748926951,
+    "alto": 871.2120696462331,
+    "n": 5
+   },
+   "p50": {
+    "media": 429.767871906697,
+    "baixo": 424.15240515285814,
+    "alto": 433.3439480639084,
+    "n": 5
+   },
+   "p90_vermelho": {
+    "media": 924.3172003319953,
+    "baixo": 804.2541582645347,
+    "alto": 1037.1165739878365,
+    "n": 5
+   },
+   "pendentes": {
+    "media": 0.0,
+    "baixo": 0.0,
+    "alto": 0.0,
+    "n": 5
+   },
+   "Centro": {
+    "media": 678.8923041661722,
+    "baixo": 642.4071726095282,
+    "alto": 715.377435722816,
+    "n": 5
+   },
+   "Sul": {
+    "media": 617.605698354789,
+    "baixo": 562.0491355189007,
+    "alto": 679.3244255715705,
+    "n": 5
+   },
+   "Norte": {
+    "media": 673.4667165267866,
+    "baixo": 636.4138453336136,
+    "alto": 710.5990753385761,
+    "n": 5
+   },
+   "Barra": {
+    "media": 1152.8457217289274,
+    "baixo": 1104.7752878053172,
+    "alto": 1191.2499829883757,
+    "n": 5
+   },
+   "Oeste": {
+    "media": 646.1030207247718,
+    "baixo": 592.5231164913814,
+    "alto": 723.9252901771245,
+    "n": 5
+   }
+  },
+  "tempo_real_seg": 230.4
+ },
+ "controle": {
+  "cenario": {
+   "nome": "+2 em UPA Engenho Novo",
+   "n_ambulancias": 75,
+   "politica": "menor_eta",
+   "alocacao": {
+    "base-01": 2,
+    "base-02": 2,
+    "base-03": 2,
+    "base-04": 3,
+    "base-05": 2,
+    "base-06": 1,
+    "base-07": 2,
+    "base-08": 2,
+    "base-09": 2,
+    "base-10": 2,
+    "base-11": 2,
+    "base-12": 2,
+    "base-13": 2,
+    "base-14": 2,
+    "base-15": 2,
+    "base-16": 2,
+    "base-17": 2,
+    "base-18": 2,
+    "base-19": 2,
+    "base-20": 2,
+    "base-21": 2,
+    "base-22": 1,
+    "base-23": 2,
+    "base-24": 2,
+    "base-25": 2,
+    "base-26": 2,
+    "base-27": 1,
+    "base-28": 2,
+    "base-29": 2,
+    "base-30": 2,
+    "base-31": 1,
+    "base-32": 1,
+    "base-33": 3,
+    "base-34": 1,
+    "base-35": 1,
+    "base-36": 3,
+    "base-37": 1,
+    "base-38": 1,
+    "base-39": 1,
+    "base-40": 1,
+    "base-41": 1,
+    "base-42": 1,
+    "base-43": 1
+   },
+   "bases_extra": [],
+   "transito": false,
+   "reposicionamento": false
+  },
+  "seeds": [
+   42,
+   7,
+   2024,
+   11,
+   99
+  ],
+  "duracao_sim_seg": 86400,
+  "chamados_por_dia": 600,
+  "por_seed": [
+   {
+    "seed": 42,
+    "p90": 814.4529959403394,
+    "p50": 417.3860390278933,
+    "pendentes": 0,
+    "p90_vermelho": 1011.3976384930138,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 635.2095496603723,
+    "Sul": 636.4120238016636,
+    "Norte": 581.1831910691326,
+    "Barra": 1202.4332447813686,
+    "Oeste": 613.7479336972116
+   },
+   {
+    "seed": 7,
+    "p90": 904.4217713027065,
+    "p50": 436.4311603346614,
+    "pendentes": 0,
+    "p90_vermelho": 775.0720734224043,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 660.048634762918,
+    "Sul": 620.5408089438322,
+    "Norte": 781.4899353506872,
+    "Barra": 1144.849581710551,
+    "Oeste": 877.8565005892668
+   },
+   {
+    "seed": 2024,
+    "p90": 845.0235145545754,
+    "p50": 425.94876106833726,
+    "pendentes": 0,
+    "p90_vermelho": 1056.1695865933943,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 702.8107829965548,
+    "Sul": 715.3475593117123,
+    "Norte": 700.6702727978918,
+    "Barra": 1233.727916453852,
+    "Oeste": 620.4670163414528
+   },
+   {
+    "seed": 11,
+    "p90": 846.4315295422941,
+    "p50": 429.52023626970185,
+    "pendentes": 0,
+    "p90_vermelho": 1023.5871326529665,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 736.2562689300604,
+    "Sul": 534.0555237593464,
+    "Norte": 689.4992505988185,
+    "Barra": 1160.7847731261731,
+    "Oeste": 633.5528271234027
+   },
+   {
+    "seed": 99,
+    "p90": 805.140531788458,
+    "p50": 419.5634880028774,
+    "pendentes": 0,
+    "p90_vermelho": 804.6597327205236,
+    "atendidos": 600,
+    "total": 600,
+    "Centro": 717.252702407111,
+    "Sul": 687.6531849721373,
+    "Norte": 589.5840676661059,
+    "Barra": 1084.1781953311931,
+    "Oeste": 595.0055155766823
+   }
+  ],
+  "resumo": {
+   "p90": {
+    "media": 843.0940686256747,
+    "baixo": 815.2612241696015,
+    "alto": 874.5483648806069,
+    "n": 5
+   },
+   "p50": {
+    "media": 425.76993694069427,
+    "baixo": 419.96956302597573,
+    "alto": 431.57031085541274,
+    "n": 5
+   },
+   "p90_vermelho": {
+    "media": 934.1772327764605,
+    "baixo": 830.6926171281406,
+    "alto": 1034.182215397147,
+    "n": 5
+   },
+   "pendentes": {
+    "media": 0.0,
+    "baixo": 0.0,
+    "alto": 0.0,
+    "n": 5
+   },
+   "Centro": {
+    "media": 690.3155877514033,
+    "baixo": 656.5859972302292,
+    "alto": 721.9657451341795,
+    "n": 5
+   },
+   "Sul": {
+    "media": 638.8018201577383,
+    "baixo": 582.0721130388017,
+    "alto": 690.8473343702213,
+    "n": 5
+   },
+   "Norte": {
+    "media": 668.4853434965272,
+    "baixo": 606.7607827342791,
+    "alto": 730.7639333791954,
+    "n": 5
+   },
+   "Barra": {
+    "media": 1165.1947422806275,
+    "baixo": 1119.9634824971,
+    "alto": 1206.6214191193228,
+    "n": 5
+   },
+   "Oeste": {
+    "media": 668.1259586656032,
+    "baixo": 606.4634615101322,
+    "alto": 773.556890361293,
+    "n": 5
+   }
+  },
+  "tempo_real_seg": 229.8
+ },
+ "vs_controle": {
+  "p90": {
+   "media": -5.387145343405246,
+   "baixo": -28.774933939873495,
+   "alto": 18.000643253063004,
+   "n": 5,
+   "significativo": false
+  },
+  "p50": {
+   "media": -3.9979349660027426,
+   "baixo": -10.569507394592074,
+   "alto": 1.8480615592648975,
+   "n": 5,
+   "significativo": false
+  },
+  "p90_vermelho": {
+   "media": 9.860032444465242,
+   "baixo": -7.791155353423028,
+   "alto": 38.00931612504537,
+   "n": 5,
+   "significativo": false
+  },
+  "pendentes": {
+   "media": 0.0,
+   "baixo": 0.0,
+   "alto": 0.0,
+   "n": 5,
+   "significativo": false
+  },
+  "Centro": {
+   "media": 11.423283585231207,
+   "baixo": 1.5312727602242149,
+   "alto": 20.655172830939456,
+   "n": 5,
+   "significativo": true
+  },
+  "Sul": {
+   "media": 21.19612180294946,
+   "baixo": -19.244760952260684,
+   "alto": 80.57509407395578,
+   "n": 5,
+   "significativo": false
+  },
+  "Norte": {
+   "media": -4.981373030259396,
+   "baixo": -36.20405577121528,
+   "alto": 21.783653691467475,
+   "n": 5,
+   "significativo": false
+  },
+  "Barra": {
+   "media": 12.349020551700232,
+   "baixo": -27.76707795721486,
+   "alto": 44.109524726233715,
+   "n": 5,
+   "significativo": false
+  },
+  "Oeste": {
+   "media": 22.022937940831458,
+   "baixo": -7.196926184937797,
+   "alto": 54.89607515534185,
+   "n": 5,
+   "significativo": false
+  }
+ },
+ "triagem": [
+  {
+   "cand": {
+    "id": "cand-vargem-pequena",
+    "nome": "Nova base — Vargem Pequena",
+    "lat": -22.98246,
+    "lon": -43.4586,
+    "zona": "Barra",
+    "bairro": "Vargem Pequena",
+    "dist_base_mais_proxima_km": 9.8,
+    "demanda_descoberta": 31115.0
+   },
+   "p90": 709.7027666071226,
+   "ganho_seg": -62.269675536598015,
+   "pior_zona": 990.8079709923003,
+   "por_zona": {
+    "Centro": 579.7725102496494,
+    "Sul": 681.1405636114578,
+    "Norte": 538.7763675626708,
+    "Barra": 990.8079709923003,
+    "Oeste": 534.5443381100617
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-pedra-de-guaratiba",
+    "nome": "Nova base — Pedra de Guaratiba",
+    "lat": -22.99822,
+    "lon": -43.63776,
+    "zona": "Oeste",
+    "bairro": "Pedra de Guaratiba",
+    "dist_base_mais_proxima_km": 6.3,
+    "demanda_descoberta": 11950.0
+   },
+   "p90": 709.7027666107606,
+   "ganho_seg": -62.269675532960036,
+   "pior_zona": 1209.7708353510584,
+   "por_zona": {
+    "Centro": 609.8747314934553,
+    "Sul": 687.0387226671955,
+    "Norte": 524.7157469194808,
+    "Barra": 1209.7708353510584,
+    "Oeste": 509.9364061512679
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-vargem-grande",
+    "nome": "Nova base — Vargem Grande",
+    "lat": -22.97177,
+    "lon": -43.49192,
+    "zona": "Barra",
+    "bairro": "Vargem Grande",
+    "dist_base_mais_proxima_km": 10.1,
+    "demanda_descoberta": 20663.0
+   },
+   "p90": 709.8697819289282,
+   "ganho_seg": -62.10266021479242,
+   "pior_zona": 1036.075563903136,
+   "por_zona": {
+    "Centro": 579.7725102496494,
+    "Sul": 681.1405636114578,
+    "Norte": 529.7841549494464,
+    "Barra": 1036.075563903136,
+    "Oeste": 561.5443381090139
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-recreio-dos-bandeirantes",
+    "nome": "Nova base — Recreio dos Bandeirantes",
+    "lat": -23.01515,
+    "lon": -43.48088,
+    "zona": "Barra",
+    "bairro": "Recreio dos Bandeirantes",
+    "dist_base_mais_proxima_km": 12.2,
+    "demanda_descoberta": 141316.0
+   },
+   "p90": 712.745660077434,
+   "ganho_seg": -59.22678206628666,
+   "pior_zona": 1024.6626916192702,
+   "por_zona": {
+    "Centro": 593.0580122115462,
+    "Sul": 681.1405636187337,
+    "Norte": 539.426521800894,
+    "Barra": 1024.6626916192702,
+    "Oeste": 534.5443381173377
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-ilha-de-guaratiba",
+    "nome": "Nova base — Ilha de Guaratiba",
+    "lat": -22.99665,
+    "lon": -43.56218,
+    "zona": "Oeste",
+    "bairro": "Ilha de Guaratiba",
+    "dist_base_mais_proxima_km": 9.8,
+    "demanda_descoberta": 6099.0
+   },
+   "p90": 723.8697819317804,
+   "ganho_seg": -48.10266021194025,
+   "pior_zona": 1135.7697903293738,
+   "por_zona": {
+    "Centro": 579.7725102547425,
+    "Sul": 681.1405636187337,
+    "Norte": 561.5702383235487,
+    "Barra": 1135.7697903293738,
+    "Oeste": 499.4408156457336
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-guaratiba",
+    "nome": "Nova base — Guaratiba",
+    "lat": -22.99221,
+    "lon": -43.58942,
+    "zona": "Oeste",
+    "bairro": "Guaratiba",
+    "dist_base_mais_proxima_km": 8.1,
+    "demanda_descoberta": 154125.0
+   },
+   "p90": 742.7456600835458,
+   "ganho_seg": -29.226782060174855,
+   "pior_zona": 1209.7708353510584,
+   "por_zona": {
+    "Centro": 579.7725102547425,
+    "Sul": 681.1405636187337,
+    "Norte": 535.4556095988723,
+    "Barra": 1209.7708353510584,
+    "Oeste": 487.02771668865176
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-grumari",
+    "nome": "Nova base — Grumari",
+    "lat": -23.04643,
+    "lon": -43.53149,
+    "zona": "Barra",
+    "bairro": "Grumari",
+    "dist_base_mais_proxima_km": 15.7,
+    "demanda_descoberta": 184.0
+   },
+   "p90": 744.7456600766773,
+   "ganho_seg": -27.22678206704336,
+   "pior_zona": 1043.2626916136005,
+   "por_zona": {
+    "Centro": 602.1725102542129,
+    "Sul": 681.1405636114578,
+    "Norte": 537.57023832448,
+    "Barra": 1043.2626916136005,
+    "Oeste": 534.5443381100617
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-barra-de-guaratiba",
+    "nome": "Nova base — Barra de Guaratiba",
+    "lat": -23.0386,
+    "lon": -43.55034,
+    "zona": "Oeste",
+    "bairro": "Barra de Guaratiba",
+    "dist_base_mais_proxima_km": 14.6,
+    "demanda_descoberta": 4755.0
+   },
+   "p90": 747.6850592507246,
+   "ganho_seg": -24.287382892995993,
+   "pior_zona": 1211.1708353513436,
+   "por_zona": {
+    "Centro": 602.1725102542129,
+    "Sul": 713.140563617977,
+    "Norte": 533.4265218069474,
+    "Barra": 1211.1708353513436,
+    "Oeste": 534.5443381173377
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-camorim",
+    "nome": "Nova base — Camorim",
+    "lat": -22.96916,
+    "lon": -43.43319,
+    "zona": "Barra",
+    "bairro": "Camorim",
+    "dist_base_mais_proxima_km": 7.2,
+    "demanda_descoberta": 1383.0
+   },
+   "p90": 754.5007218480025,
+   "ganho_seg": -17.471720295718114,
+   "pior_zona": 1146.0635928915726,
+   "por_zona": {
+    "Centro": 579.7725102547425,
+    "Sul": 711.1405636175696,
+    "Norte": 529.3841549551856,
+    "Barra": 1146.0635928915726,
+    "Oeste": 546.876451290305
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-itanhanga",
+    "nome": "Nova base — Itanhanga",
+    "lat": -22.98593,
+    "lon": -43.31005,
+    "zona": "Barra",
+    "bairro": "Itanhanga",
+    "dist_base_mais_proxima_km": 5.6,
+    "demanda_descoberta": 67969.0
+   },
+   "p90": 824.1686200876684,
+   "ganho_seg": 52.19617794394776,
+   "pior_zona": 1197.1542894275308,
+   "por_zona": {
+    "Centro": 579.7725102496494,
+    "Sul": 860.3890381902384,
+    "Norte": 539.426521800894,
+    "Barra": 1197.1542894275308,
+    "Oeste": 583.0459342794552
+   }
+  }
+ ],
+ "finalistas": [
+  {
+   "cand": {
+    "id": "cand-vargem-pequena",
+    "nome": "Nova base — Vargem Pequena",
+    "lat": -22.98246,
+    "lon": -43.4586,
+    "zona": "Barra",
+    "bairro": "Vargem Pequena",
+    "dist_base_mais_proxima_km": 9.8,
+    "demanda_descoberta": 31115.0
+   },
+   "resultado": {
+    "cenario": {
+     "nome": "Nova base — Vargem Pequena",
+     "n_ambulancias": 75,
+     "politica": "menor_eta",
+     "alocacao": {
+      "base-01": 2,
+      "base-02": 2,
+      "base-03": 2,
+      "base-04": 3,
+      "base-05": 2,
+      "base-06": 1,
+      "base-07": 2,
+      "base-08": 2,
+      "base-09": 2,
+      "base-10": 2,
+      "base-11": 2,
+      "base-12": 2,
+      "base-13": 2,
+      "base-14": 2,
+      "base-15": 2,
+      "base-16": 2,
+      "base-17": 2,
+      "base-18": 2,
+      "base-19": 2,
+      "base-20": 2,
+      "base-21": 2,
+      "base-22": 1,
+      "base-23": 2,
+      "base-24": 2,
+      "base-25": 2,
+      "base-26": 2,
+      "base-27": 1,
+      "base-28": 2,
+      "base-29": 2,
+      "base-30": 2,
+      "base-31": 1,
+      "base-32": 1,
+      "base-33": 1,
+      "base-34": 1,
+      "base-35": 1,
+      "base-36": 3,
+      "base-37": 1,
+      "base-38": 1,
+      "base-39": 1,
+      "base-40": 1,
+      "base-41": 1,
+      "base-42": 1,
+      "base-43": 1,
+      "cand-vargem-pequena": 2
+     },
+     "bases_extra": [
+      {
+       "id": "cand-vargem-pequena",
+       "nome": "Nova base — Vargem Pequena",
+       "lat": -22.98246,
+       "lon": -43.4586
+      }
+     ],
+     "transito": false,
+     "reposicionamento": false
+    },
+    "seeds": [
+     42,
+     7,
+     2024,
+     11,
+     99
+    ],
+    "duracao_sim_seg": 86400,
+    "chamados_por_dia": 600,
+    "por_seed": [
+     {
+      "seed": 42,
+      "p90": 760.2616409425333,
+      "p50": 418.58971728280994,
+      "pendentes": 0,
+      "p90_vermelho": 917.7433072859749,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 639.726214063671,
+      "Sul": 674.8372720814587,
+      "Norte": 607.956553604744,
+      "Barra": 1024.1842786398556,
+      "Oeste": 631.5736778373381
+     },
+     {
+      "seed": 7,
+      "p90": 825.1138175313922,
+      "p50": 415.07436421240027,
+      "pendentes": 0,
+      "p90_vermelho": 786.1837485050709,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 660.1972533320464,
+      "Sul": 588.5408089518648,
+      "Norte": 732.4453664233733,
+      "Barra": 1040.435913855306,
+      "Oeste": 754.5009107287917
+     },
+     {
+      "seed": 2024,
+      "p90": 798.9927961987336,
+      "p50": 417.5938964353227,
+      "pendentes": 0,
+      "p90_vermelho": 818.8343914313737,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 738.0136887851847,
+      "Sul": 729.1179877624089,
+      "Norte": 710.6675152463285,
+      "Barra": 1095.1315741033459,
+      "Oeste": 601.6318146971171
+     },
+     {
+      "seed": 11,
+      "p90": 816.6814505960996,
+      "p50": 425.39816166277706,
+      "pendentes": 0,
+      "p90_vermelho": 809.8566350694111,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 731.1324920343468,
+      "Sul": 536.0555237597539,
+      "Norte": 703.4460255273035,
+      "Barra": 1023.9454604907675,
+      "Oeste": 581.8690664172391
+     },
+     {
+      "seed": 99,
+      "p90": 766.1455071620899,
+      "p50": 413.0977800946821,
+      "pendentes": 0,
+      "p90_vermelho": 802.6597327201162,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 697.9587987098333,
+      "Sul": 658.388597884545,
+      "Norte": 610.2295028713619,
+      "Barra": 1015.9729647330707,
+      "Oeste": 578.1602980579657
+     }
+    ],
+    "resumo": {
+     "p90": {
+      "media": 793.4390424861697,
+      "baixo": 770.3614184815959,
+      "alto": 814.8301931036849,
+      "n": 5
+     },
+     "p50": {
+      "media": 417.95078393759843,
+      "baixo": 414.39232018635386,
+      "alto": 421.9717132967083,
+      "n": 5
+     },
+     "p90_vermelho": {
+      "media": 827.0555630023894,
+      "baixo": 797.4484544031995,
+      "alto": 873.1492579294903,
+      "n": 5
+     },
+     "pendentes": {
+      "media": 0.0,
+      "baixo": 0.0,
+      "alto": 0.0,
+      "n": 5
+     },
+     "Centro": {
+      "media": 693.4056893850164,
+      "baixo": 659.5611467002536,
+      "alto": 725.8739927196117,
+      "n": 5
+     },
+     "Sul": {
+      "media": 637.3880380880062,
+      "baixo": 581.5162526615566,
+      "alto": 693.259823514456,
+      "n": 5
+     },
+     "Norte": {
+      "media": 672.9489927346223,
+      "baixo": 628.4182175492267,
+      "alto": 717.9343577733414,
+      "n": 5
+     },
+     "Barra": {
+      "media": 1039.934038364469,
+      "baixo": 1020.8042258175064,
+      "alto": 1068.3607201796829,
+      "n": 5
+     },
+     "Oeste": {
+      "media": 629.5471535476903,
+      "baixo": 584.3381087295054,
+      "alto": 694.6473416163358,
+      "n": 5
+     }
+    },
+    "tempo_real_seg": 230.0
+   },
+   "vs_baseline": {
+    "p90": {
+     "media": -55.04217148291023,
+     "baixo": -77.31907377727927,
+     "alto": -32.36623189549043,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -11.817087969098576,
+     "baixo": -15.048991549761979,
+     "alto": -8.112990213253454,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -97.26163732960592,
+     "baixo": -202.09150193032752,
+     "alto": 7.568227271115665,
+     "n": 5,
+     "significativo": false
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": 14.513385218844359,
+     "baixo": -8.267920457027572,
+     "alto": 37.08975800688754,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": 19.78233973321735,
+     "baixo": -7.320938461372475,
+     "alto": 61.138595237885056,
+     "n": 5,
+     "significativo": false
+    },
+    "Norte": {
+     "media": -0.5177237921643382,
+     "baixo": -19.232046071510375,
+     "alto": 16.876732911669933,
+     "n": 5,
+     "significativo": false
+    },
+    "Barra": {
+     "media": -112.91168336445824,
+     "baixo": -143.12526412655183,
+     "alto": -79.92966856685965,
+     "n": 5,
+     "significativo": true
+    },
+    "Oeste": {
+     "media": -16.55586717708145,
+     "baixo": -31.08268242842987,
+     "alto": -3.3383888072232595,
+     "n": 5,
+     "significativo": true
+    }
+   },
+   "vs_controle": {
+    "p90": {
+     "media": -49.65502613950498,
+     "baixo": -64.58992085923055,
+     "alto": -36.70418510019344,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -7.819153003095835,
+     "baixo": -15.309465521344555,
+     "alto": -1.991773462188212,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -107.12166977407117,
+     "baixo": -199.1571433396382,
+     "alto": -15.086196208504134,
+     "n": 5,
+     "significativo": true
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": 3.0901016336131533,
+     "baixo": -11.697764716849566,
+     "alto": 20.126711807860897,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": -1.4137820697321104,
+     "baixo": -24.105834831742367,
+     "alto": 21.27827069227815,
+     "n": 5,
+     "significativo": false
+    },
+    "Norte": {
+     "media": 4.4636492380950585,
+     "baixo": -22.508299329640135,
+     "alto": 21.87102067132712,
+     "n": 5,
+     "significativo": false
+    },
+    "Barra": {
+     "media": -125.26070391615846,
+     "baixo": -155.19997578303793,
+     "alto": -89.5251404000237,
+     "n": 5,
+     "significativo": true
+    },
+    "Oeste": {
+     "media": -38.57880511791291,
+     "baixo": -81.14943774889552,
+     "alto": -3.0103491609001365,
+     "n": 5,
+     "significativo": true
+    }
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-recreio-dos-bandeirantes",
+    "nome": "Nova base — Recreio dos Bandeirantes",
+    "lat": -23.01515,
+    "lon": -43.48088,
+    "zona": "Barra",
+    "bairro": "Recreio dos Bandeirantes",
+    "dist_base_mais_proxima_km": 12.2,
+    "demanda_descoberta": 141316.0
+   },
+   "resultado": {
+    "cenario": {
+     "nome": "Nova base — Recreio dos Bandeirantes",
+     "n_ambulancias": 75,
+     "politica": "menor_eta",
+     "alocacao": {
+      "base-01": 2,
+      "base-02": 2,
+      "base-03": 2,
+      "base-04": 3,
+      "base-05": 2,
+      "base-06": 1,
+      "base-07": 2,
+      "base-08": 2,
+      "base-09": 2,
+      "base-10": 2,
+      "base-11": 2,
+      "base-12": 2,
+      "base-13": 2,
+      "base-14": 2,
+      "base-15": 2,
+      "base-16": 2,
+      "base-17": 2,
+      "base-18": 2,
+      "base-19": 2,
+      "base-20": 2,
+      "base-21": 2,
+      "base-22": 1,
+      "base-23": 2,
+      "base-24": 2,
+      "base-25": 2,
+      "base-26": 2,
+      "base-27": 1,
+      "base-28": 2,
+      "base-29": 2,
+      "base-30": 2,
+      "base-31": 1,
+      "base-32": 1,
+      "base-33": 1,
+      "base-34": 1,
+      "base-35": 1,
+      "base-36": 3,
+      "base-37": 1,
+      "base-38": 1,
+      "base-39": 1,
+      "base-40": 1,
+      "base-41": 1,
+      "base-42": 1,
+      "base-43": 1,
+      "cand-recreio-dos-bandeirantes": 2
+     },
+     "bases_extra": [
+      {
+       "id": "cand-recreio-dos-bandeirantes",
+       "nome": "Nova base — Recreio dos Bandeirantes",
+       "lat": -23.01515,
+       "lon": -43.48088
+      }
+     ],
+     "transito": false,
+     "reposicionamento": false
+    },
+    "seeds": [
+     42,
+     7,
+     2024,
+     11,
+     99
+    ],
+    "duracao_sim_seg": 86400,
+    "chamados_por_dia": 600,
+    "por_seed": [
+     {
+      "seed": 42,
+      "p90": 777.9777220493904,
+      "p50": 415.91006166836814,
+      "pendentes": 0,
+      "p90_vermelho": 1021.5486454437087,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 618.5113516055368,
+      "Sul": 667.5280901706356,
+      "Norte": 623.889525256423,
+      "Barra": 1057.3249087060613,
+      "Oeste": 609.7409922411724
+     },
+     {
+      "seed": 7,
+      "p90": 853.3705937398358,
+      "p50": 413.18843813255125,
+      "pendentes": 0,
+      "p90_vermelho": 763.8801747173653,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 625.4216885286114,
+      "Sul": 590.5635910568304,
+      "Norte": 765.5038920487015,
+      "Barra": 1040.4359138509403,
+      "Oeste": 714.3802690605644
+     },
+     {
+      "seed": 2024,
+      "p90": 786.6095739369608,
+      "p50": 394.11496179701135,
+      "pendentes": 0,
+      "p90_vermelho": 795.135084609472,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 717.6028243330336,
+      "Sul": 740.1140956340648,
+      "Norte": 720.1863247179172,
+      "Barra": 1061.1345014975784,
+      "Oeste": 602.1208591458198
+     },
+     {
+      "seed": 11,
+      "p90": 804.4361347034575,
+      "p50": 422.4141667097174,
+      "pendentes": 0,
+      "p90_vermelho": 779.385322775894,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 741.1989135346986,
+      "Sul": 526.7633884982239,
+      "Norte": 693.7681286366379,
+      "Barra": 1055.9557352049014,
+      "Oeste": 598.4437324817919
+     },
+     {
+      "seed": 99,
+      "p90": 753.4891744179731,
+      "p50": 409.2102401005286,
+      "pendentes": 0,
+      "p90_vermelho": 809.4677233998664,
+      "atendidos": 598,
+      "total": 598,
+      "Centro": 704.6904216106283,
+      "Sul": 716.1885978832236,
+      "Norte": 615.8596414691376,
+      "Barra": 963.0389211883798,
+      "Oeste": 547.0969947849298
+     }
+    ],
+    "resumo": {
+     "p90": {
+      "media": 795.1766397695235,
+      "baixo": 768.5762760013534,
+      "alto": 824.9398154411717,
+      "n": 5
+     },
+     "p50": {
+      "media": 410.9675736816354,
+      "baixo": 401.4930374319862,
+      "alto": 418.4725603796098,
+      "n": 5
+     },
+     "p90_vermelho": {
+      "media": 833.8833901892613,
+      "baixo": 776.3332159191981,
+      "alto": 927.8332687432983,
+      "n": 5
+     },
+     "pendentes": {
+      "media": 0.0,
+      "baixo": 0.0,
+      "alto": 0.0,
+      "n": 5
+     },
+     "Centro": {
+      "media": 681.4850399225018,
+      "baixo": 638.5113003757849,
+      "alto": 724.4587794692186,
+      "n": 5
+     },
+     "Sul": {
+      "media": 648.2315526485957,
+      "baixo": 580.4364098561489,
+      "alto": 711.2415958908742,
+      "n": 5
+     },
+     "Norte": {
+      "media": 683.8415024257635,
+      "baixo": 634.6532924175518,
+      "alto": 733.0297124339751,
+      "n": 5
+     },
+     "Barra": {
+      "media": 1035.5779960895723,
+      "baixo": 997.3755172244282,
+      "alto": 1058.3010764222042,
+      "n": 5
+     },
+     "Oeste": {
+      "media": 614.3565695428557,
+      "baixo": 569.8951418155508,
+      "alto": 669.4765050946665,
+      "n": 5
+     }
+    },
+    "tempo_real_seg": 229.8
+   },
+   "vs_baseline": {
+    "p90": {
+     "media": -53.3045741995564,
+     "baixo": -77.06089121739589,
+     "alto": -29.548257181716895,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -18.800298225061635,
+     "baixo": -28.286781521276396,
+     "alto": -11.785278244484653,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -90.433810142734,
+     "baixo": -203.19667035359225,
+     "alto": 22.329050068124253,
+     "n": 5,
+     "significativo": false
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": 2.5927357563296254,
+     "baixo": -12.701392955323922,
+     "alto": 18.906169514947237,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": 30.625854293806743,
+     "baixo": -11.560192312020558,
+     "alto": 97.82373111831313,
+     "n": 5,
+     "significativo": false
+    },
+    "Norte": {
+     "media": 10.374785898976825,
+     "baixo": -10.88291907781038,
+     "alto": 25.609031092436773,
+     "n": 5,
+     "significativo": false
+    },
+    "Barra": {
+     "media": -117.2677256393551,
+     "baixo": -145.89976924849037,
+     "alto": -92.38864042737755,
+     "n": 5,
+     "significativo": true
+    },
+    "Oeste": {
+     "media": -31.746451181916107,
+     "baixo": -59.42379565885885,
+     "alto": -8.649564549094976,
+     "n": 5,
+     "significativo": true
+    }
+   },
+   "vs_controle": {
+    "p90": {
+     "media": -47.91742885615115,
+     "baixo": -54.35639066933677,
+     "alto": -40.89137064925912,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -14.802363259058893,
+     "baixo": -25.170037915214472,
+     "alto": -5.5034683482736,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -100.29384258719924,
+     "baixo": -204.33290448540575,
+     "alto": 3.7452193110072587,
+     "n": 5,
+     "significativo": false
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": -8.830547828901581,
+     "baixo": -23.869697326623964,
+     "alto": 5.381418217150236,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": 9.429732490857281,
+     "baixo": -13.22154451063118,
+     "alto": 28.813898976493782,
+     "n": 5,
+     "significativo": false
+    },
+    "Norte": {
+     "media": 15.356158929236221,
+     "baixo": -0.7836557216614892,
+     "alto": 31.732690880544464,
+     "n": 5,
+     "significativo": false
+    },
+    "Barra": {
+     "media": -129.61674619105534,
+     "baixo": -153.46044976074776,
+     "alto": -107.92493714091566,
+     "n": 5,
+     "significativo": true
+    },
+    "Oeste": {
+     "media": -53.76938912274757,
+     "baixo": -108.77678928467022,
+     "alto": -15.963058388990998,
+     "n": 5,
+     "significativo": true
+    }
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-pedra-de-guaratiba",
+    "nome": "Nova base — Pedra de Guaratiba",
+    "lat": -22.99822,
+    "lon": -43.63776,
+    "zona": "Oeste",
+    "bairro": "Pedra de Guaratiba",
+    "dist_base_mais_proxima_km": 6.3,
+    "demanda_descoberta": 11950.0
+   },
+   "resultado": {
+    "cenario": {
+     "nome": "Nova base — Pedra de Guaratiba",
+     "n_ambulancias": 75,
+     "politica": "menor_eta",
+     "alocacao": {
+      "base-01": 2,
+      "base-02": 2,
+      "base-03": 2,
+      "base-04": 3,
+      "base-05": 2,
+      "base-06": 1,
+      "base-07": 2,
+      "base-08": 2,
+      "base-09": 2,
+      "base-10": 2,
+      "base-11": 2,
+      "base-12": 2,
+      "base-13": 2,
+      "base-14": 2,
+      "base-15": 2,
+      "base-16": 2,
+      "base-17": 2,
+      "base-18": 2,
+      "base-19": 2,
+      "base-20": 2,
+      "base-21": 2,
+      "base-22": 1,
+      "base-23": 2,
+      "base-24": 2,
+      "base-25": 2,
+      "base-26": 2,
+      "base-27": 1,
+      "base-28": 2,
+      "base-29": 2,
+      "base-30": 2,
+      "base-31": 1,
+      "base-32": 1,
+      "base-33": 1,
+      "base-34": 1,
+      "base-35": 1,
+      "base-36": 3,
+      "base-37": 1,
+      "base-38": 1,
+      "base-39": 1,
+      "base-40": 1,
+      "base-41": 1,
+      "base-42": 1,
+      "base-43": 1,
+      "cand-pedra-de-guaratiba": 2
+     },
+     "bases_extra": [
+      {
+       "id": "cand-pedra-de-guaratiba",
+       "nome": "Nova base — Pedra de Guaratiba",
+       "lat": -22.99822,
+       "lon": -43.63776
+      }
+     ],
+     "transito": false,
+     "reposicionamento": false
+    },
+    "seeds": [
+     42,
+     7,
+     2024,
+     11,
+     99
+    ],
+    "duracao_sim_seg": 86400,
+    "chamados_por_dia": 600,
+    "por_seed": [
+     {
+      "seed": 42,
+      "p90": 751.8854156175396,
+      "p50": 404.8205670699899,
+      "pendentes": 0,
+      "p90_vermelho": 1016.8038506330122,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 614.681183576044,
+      "Sul": 655.2731797783184,
+      "Norte": 600.4308195680328,
+      "Barra": 1169.956664466772,
+      "Oeste": 570.2588196375378
+     },
+     {
+      "seed": 7,
+      "p90": 859.5924918210486,
+      "p50": 419.3496614991527,
+      "pendentes": 0,
+      "p90_vermelho": 771.8899898461648,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 664.2627957583979,
+      "Sul": 589.7408089441059,
+      "Norte": 772.4382961532245,
+      "Barra": 1147.0740434086795,
+      "Oeste": 620.2838409166325
+     },
+     {
+      "seed": 2024,
+      "p90": 819.2595695435364,
+      "p50": 419.62638757694003,
+      "pendentes": 0,
+      "p90_vermelho": 967.3265964524107,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 739.4205280569607,
+      "Sul": 715.3475593044363,
+      "Norte": 721.0096337349933,
+      "Barra": 1192.8313577760614,
+      "Oeste": 592.5521530615835
+     },
+     {
+      "seed": 11,
+      "p90": 825.1847803883154,
+      "p50": 431.8306302196761,
+      "pendentes": 0,
+      "p90_vermelho": 1012.1058676115815,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 708.0445491552767,
+      "Sul": 599.4262222003671,
+      "Norte": 717.6592458126025,
+      "Barra": 1157.7772607899155,
+      "Oeste": 579.8690664110109
+     },
+     {
+      "seed": 99,
+      "p90": 793.1972863288022,
+      "p50": 416.7764854481866,
+      "pendentes": 0,
+      "p90_vermelho": 834.6597327266354,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 727.6247843509976,
+      "Sul": 632.1755383394869,
+      "Norte": 612.4885583757889,
+      "Barra": 1108.9053808067285,
+      "Oeste": 535.1643474148209
+     }
+    ],
+    "resumo": {
+     "p90": {
+      "media": 809.8239087398484,
+      "baixo": 778.8350771879383,
+      "alto": 838.2468662670968,
+      "n": 5
+     },
+     "p50": {
+      "media": 418.4807463627891,
+      "baixo": 410.63220484165504,
+      "alto": 426.37895273683097,
+      "n": 5
+     },
+     "p90_vermelho": {
+      "media": 920.557207453961,
+      "baixo": 832.4871139753423,
+      "alto": 1005.0292065883198,
+      "n": 5
+     },
+     "pendentes": {
+      "media": 0.0,
+      "baixo": 0.0,
+      "alto": 0.0,
+      "n": 5
+     },
+     "Centro": {
+      "media": 690.8067681795353,
+      "baixo": 647.1862261675054,
+      "alto": 728.4270347942387,
+      "n": 5
+     },
+     "Sul": {
+      "media": 638.3926617133429,
+      "baixo": 602.1019201256865,
+      "alto": 679.3029315887655,
+      "n": 5
+     },
+     "Norte": {
+      "media": 684.8053107289285,
+      "baixo": 626.9581301629762,
+      "alto": 740.9110211178076,
+      "n": 5
+     },
+     "Barra": {
+      "media": 1155.3089414496312,
+      "baixo": 1128.7493700591274,
+      "alto": 1176.6706610551166,
+      "n": 5
+     },
+     "Oeste": {
+      "media": 579.6256454883171,
+      "baixo": 553.0462350132968,
+      "alto": 603.6448282036031,
+      "n": 5
+     }
+    },
+    "tempo_real_seg": 229.5
+   },
+   "vs_baseline": {
+    "p90": {
+     "media": -38.6573052292315,
+     "baixo": -70.57414724438192,
+     "alto": -10.818417293122797,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -11.287125543907916,
+     "baixo": -20.148737616502935,
+     "alto": -3.951954233833385,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -3.7599928780343363,
+     "baixo": -57.14073370414999,
+     "alto": 52.383549118961426,
+     "n": 5,
+     "significativo": false
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": 11.914464013363295,
+     "baixo": -11.263108694435754,
+     "alto": 35.74536571124504,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": 20.786963358554022,
+     "baixo": -6.9658037687540855,
+     "alto": 53.526578534187,
+     "n": 5,
+     "significativo": false
+    },
+    "Norte": {
+     "media": 11.338594202141802,
+     "baixo": -13.928554669238656,
+     "alto": 33.377588791713904,
+     "n": 5,
+     "significativo": false
+    },
+    "Barra": {
+     "media": 2.4632197207040463,
+     "baixo": -29.891512014549335,
+     "alto": 27.887667161180296,
+     "n": 5,
+     "significativo": false
+    },
+    "Oeste": {
+     "media": -66.47737523645469,
+     "baixo": -123.32642822780096,
+     "alto": -28.27758508092493,
+     "n": 5,
+     "significativo": true
+    }
+   },
+   "vs_controle": {
+    "p90": {
+     "media": -33.27015988582625,
+     "baixo": -50.75575392080721,
+     "alto": -18.428786847661627,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -7.289190577905174,
+     "baixo": -13.31939420382405,
+     "alto": -1.4551181401660869,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -13.620025322499577,
+     "baixo": -54.52080466486748,
+     "alto": 16.72716657317128,
+     "n": 5,
+     "significativo": false
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": 0.4911804281320883,
+     "baixo": -18.958288692958536,
+     "alto": 23.645452093367975,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": -0.4091584443954389,
+     "baixo": -39.44658798099067,
+     "alto": 37.464972962401134,
+     "n": 5,
+     "significativo": false
+    },
+    "Norte": {
+     "media": 16.3199672324012,
+     "baixo": 3.2177868108792835,
+     "alto": 24.813395015470725,
+     "n": 5,
+     "significativo": true
+    },
+    "Barra": {
+     "media": -9.885800830996185,
+     "baixo": -29.950758064206365,
+     "alto": 11.602436644870204,
+     "n": 5,
+     "significativo": false
+    },
+    "Oeste": {
+     "media": -88.50031317728615,
+     "baixo": -173.97817075799372,
+     "alto": -39.2983430782956,
+     "n": 5,
+     "significativo": true
+    }
+   }
+  },
+  {
+   "cand": {
+    "id": "cand-vargem-grande",
+    "nome": "Nova base — Vargem Grande",
+    "lat": -22.97177,
+    "lon": -43.49192,
+    "zona": "Barra",
+    "bairro": "Vargem Grande",
+    "dist_base_mais_proxima_km": 10.1,
+    "demanda_descoberta": 20663.0
+   },
+   "resultado": {
+    "cenario": {
+     "nome": "Nova base — Vargem Grande",
+     "n_ambulancias": 75,
+     "politica": "menor_eta",
+     "alocacao": {
+      "base-01": 2,
+      "base-02": 2,
+      "base-03": 2,
+      "base-04": 3,
+      "base-05": 2,
+      "base-06": 1,
+      "base-07": 2,
+      "base-08": 2,
+      "base-09": 2,
+      "base-10": 2,
+      "base-11": 2,
+      "base-12": 2,
+      "base-13": 2,
+      "base-14": 2,
+      "base-15": 2,
+      "base-16": 2,
+      "base-17": 2,
+      "base-18": 2,
+      "base-19": 2,
+      "base-20": 2,
+      "base-21": 2,
+      "base-22": 1,
+      "base-23": 2,
+      "base-24": 2,
+      "base-25": 2,
+      "base-26": 2,
+      "base-27": 1,
+      "base-28": 2,
+      "base-29": 2,
+      "base-30": 2,
+      "base-31": 1,
+      "base-32": 1,
+      "base-33": 1,
+      "base-34": 1,
+      "base-35": 1,
+      "base-36": 3,
+      "base-37": 1,
+      "base-38": 1,
+      "base-39": 1,
+      "base-40": 1,
+      "base-41": 1,
+      "base-42": 1,
+      "base-43": 1,
+      "cand-vargem-grande": 2
+     },
+     "bases_extra": [
+      {
+       "id": "cand-vargem-grande",
+       "nome": "Nova base — Vargem Grande",
+       "lat": -22.97177,
+       "lon": -43.49192
+      }
+     ],
+     "transito": false,
+     "reposicionamento": false
+    },
+    "seeds": [
+     42,
+     7,
+     2024,
+     11,
+     99
+    ],
+    "duracao_sim_seg": 86400,
+    "chamados_por_dia": 600,
+    "por_seed": [
+     {
+      "seed": 42,
+      "p90": 776.5667739284154,
+      "p50": 417.2528860186176,
+      "pendentes": 0,
+      "p90_vermelho": 967.7009815685669,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 675.905795612646,
+      "Sul": 665.9522672863168,
+      "Norte": 601.8308195661352,
+      "Barra": 1026.1842786329871,
+      "Oeste": 610.0960054135518
+     },
+     {
+      "seed": 7,
+      "p90": 852.1002750682725,
+      "p50": 421.0920377623588,
+      "pendentes": 0,
+      "p90_vermelho": 763.8801747231861,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 674.0496470977807,
+      "Sul": 591.7408089445133,
+      "Norte": 806.3746619863581,
+      "Barra": 1024.8925238672173,
+      "Oeste": 671.5057733186077
+     },
+     {
+      "seed": 2024,
+      "p90": 816.9142883964894,
+      "p50": 410.328083186002,
+      "pendentes": 0,
+      "p90_vermelho": 879.617727507677,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 721.539865457495,
+      "Sul": 735.3475593085109,
+      "Norte": 647.2146601158456,
+      "Barra": 1073.239042793239,
+      "Oeste": 610.4529923241497
+     },
+     {
+      "seed": 11,
+      "p90": 836.8255499800741,
+      "p50": 426.72052851295666,
+      "pendentes": 0,
+      "p90_vermelho": 782.38532277505,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 766.6151902562953,
+      "Sul": 630.1844673899875,
+      "Norte": 685.8589490733901,
+      "Barra": 1070.7835924060987,
+      "Oeste": 579.8690664110109
+     },
+     {
+      "seed": 99,
+      "p90": 786.8139059868978,
+      "p50": 412.0107216926808,
+      "pendentes": 0,
+      "p90_vermelho": 746.0818167500402,
+      "atendidos": 600,
+      "total": 600,
+      "Centro": 674.8973576828303,
+      "Sul": 640.7220324471389,
+      "Norte": 624.3187667673476,
+      "Barra": 1012.2346459005886,
+      "Oeste": 592.0125236080102
+     }
+    ],
+    "resumo": {
+     "p90": {
+      "media": 813.8441586720298,
+      "baixo": 788.7351296454232,
+      "alto": 838.0258803995591,
+      "n": 5
+     },
+     "p50": {
+      "media": 417.4808514345232,
+      "baixo": 412.48087410127334,
+      "alto": 422.6528689987819,
+      "n": 5
+     },
+     "p90_vermelho": {
+      "media": 827.933204664904,
+      "baixo": 760.4618611443004,
+      "alto": 905.7604977926836,
+      "n": 5
+     },
+     "pendentes": {
+      "media": 0.0,
+      "baixo": 0.0,
+      "alto": 0.0,
+      "n": 5
+     },
+     "Centro": {
+      "media": 702.6015712214095,
+      "baixo": 674.7599610347736,
+      "alto": 739.2565587818423,
+      "n": 5
+     },
+     "Sul": {
+      "media": 652.7894270752935,
+      "baixo": 616.3793453133992,
+      "alto": 695.3898355525318,
+      "n": 5
+     },
+     "Norte": {
+      "media": 673.1195715018154,
+      "baixo": 619.9027665565623,
+      "alto": 741.3627509197199,
+      "n": 5
+     },
+     "Barra": {
+      "media": 1041.4668167200261,
+      "baixo": 1020.0877236337197,
+      "alto": 1062.8459098063327,
+      "n": 5
+     },
+     "Oeste": {
+      "media": 612.7872722150661,
+      "baixo": 590.7718370903187,
+      "alto": 643.3965671775966,
+      "n": 5
+     }
+    },
+    "tempo_real_seg": 230.0
+   },
+   "vs_baseline": {
+    "p90": {
+     "media": -34.6370552970501,
+     "baixo": -58.83843836818956,
+     "alto": -10.43567222591064,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -12.287020472173811,
+     "baixo": -17.528552418431524,
+     "alto": -7.553825166082243,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -96.38399566709123,
+     "baixo": -179.09509932407508,
+     "alto": -13.992833773150233,
+     "n": 5,
+     "significativo": true
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": 23.70926705523734,
+     "baixo": -12.238140699917427,
+     "alto": 43.61214527873551,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": 35.18372872050456,
+     "baixo": 4.501274811362509,
+     "alto": 67.08674771001522,
+     "n": 5,
+     "significativo": true
+    },
+    "Norte": {
+     "media": -0.34714502497126887,
+     "baixo": -26.11203997216744,
+     "alto": 32.401478723055945,
+     "n": 5,
+     "significativo": false
+    },
+    "Barra": {
+     "media": -111.37890500890123,
+     "baixo": -149.83932353935265,
+     "alto": -75.89364294679164,
+     "n": 5,
+     "significativo": true
+    },
+    "Oeste": {
+     "media": -33.315748509705756,
+     "baixo": -82.03617016583628,
+     "alto": 0.677412038337161,
+     "n": 5,
+     "significativo": false
+    }
+   },
+   "vs_controle": {
+    "p90": {
+     "media": -29.249909953644853,
+     "baixo": -42.6365882038948,
+     "alto": -16.794887377129292,
+     "n": 5,
+     "significativo": true
+    },
+    "p50": {
+     "media": -8.289085506171068,
+     "baixo": -13.894473443894459,
+     "alto": -2.6836975684476783,
+     "n": 5,
+     "significativo": true
+    },
+    "p90_vermelho": {
+     "media": -106.24402811155646,
+     "baixo": -188.77078912878272,
+     "alto": -30.6947536343554,
+     "n": 5,
+     "significativo": true
+    },
+    "pendentes": {
+     "media": 0.0,
+     "baixo": 0.0,
+     "alto": 0.0,
+     "n": 5,
+     "significativo": false
+    },
+    "Centro": {
+     "media": 12.285983470006135,
+     "baixo": -17.921573850192363,
+     "alto": 32.16788340359144,
+     "n": 5,
+     "significativo": false
+    },
+    "Sul": {
+     "media": 13.987606917555103,
+     "baixo": -29.91869151550311,
+     "alto": 57.8254148754515,
+     "n": 5,
+     "significativo": false
+    },
+    "Norte": {
+     "media": 4.6342280052881275,
+     "baixo": -23.81431621042666,
+     "alto": 27.97729599416557,
+     "n": 5,
+     "significativo": false
+    },
+    "Barra": {
+     "media": -123.72792556060146,
+     "baixo": -155.84739056516636,
+     "alto": -88.76930362893836,
+     "n": 5,
+     "significativo": true
+    },
+    "Oeste": {
+     "media": -55.33868645053722,
+     "baixo": -135.1457868986083,
+     "alto": -4.660772904393411,
+     "n": 5,
+     "significativo": true
+    }
+   }
+  }
+ ]
+}
