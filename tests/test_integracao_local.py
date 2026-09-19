@@ -24,3 +24,14 @@ def test_fluxo_completo_em_memoria():
     assert r["eventos"].get("despachada", 0) == m["atendidos"] + m["despachados"]
     assert r["eventos"].get("erro_ciclo", 0) == 0
     assert "Oeste" in m["por_zona"]
+
+
+def test_montar_frota_com_alocacao():
+    import pytest
+    bases = carregar_bases("dados/bases.csv")
+    frota = montar_frota(bases, 5, 2, alocacao={"base-05": 3, "base-01": 2})
+    assert [a.base_id for a in frota] == ["base-01", "base-01", "base-05", "base-05", "base-05"]
+    with pytest.raises(ValueError, match="soma"):
+        montar_frota(bases, 6, 2, alocacao={"base-05": 3, "base-01": 2})
+    with pytest.raises(ValueError, match="desconhecidas"):
+        montar_frota(bases, 1, 2, alocacao={"base-99": 1})

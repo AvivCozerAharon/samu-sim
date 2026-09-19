@@ -92,3 +92,4 @@ class Rodada:
     inicio_real: float
     inicio_sim: float
     pausada: bool = False
+    alocacao: str | None = None  # JSON {base_id: n}; None = round-robin
