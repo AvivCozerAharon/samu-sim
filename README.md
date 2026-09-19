@@ -94,10 +94,44 @@ para os experimentos do D5.
 reais = 17 min *simulados* a fator 5000 (a primeira comparação saiu com P50 de 128 min por
 isso). Solução: `Roteador.etas_de(origens, destino)` em lote — 1 chamada `/table` = 34 ms.
 
+## AWS (D4 — EC2 + SQS + DynamoDB + S3 via Terraform)
+
+Mesmo código, sem LocalStack: `docker-compose.aws.yml` numa **EC2 t3.micro** falando com
+SQS, DynamoDB e S3 reais pelo *instance profile* (nenhuma credencial na máquina). Tudo criado
+por Terraform em `infra/` (15 recursos): filas, tabelas on-demand, bucket de logs, role/perfil
+IAM com permissão só nesses recursos, security group com 22 e 8000 abertos só para o seu IP,
+e a instância com *user-data* que instala Docker, clona o repo e sobe o compose.
+
+```bash
+aws configure                              # usuario IAM proprio; regiao us-east-1
+cp infra/terraform.tfvars.example infra/terraform.tfvars   # seu IP /32, chave ssh publica, repo
+bash scripts/deploy.sh                     # apply + espera a API (~4 min)
+bash scripts/atualizar_ec2.sh              # git pull + rebuild na instancia (RESET=1 zera a rodada)
+bash scripts/coletar_logs_ec2.sh           # event log -> S3 -> logs/
+terraform -chdir=infra destroy -auto-approve   # no fim da sessao
+```
+
+Custo: t3.micro ≈ US$ 0,01/h; SQS/DynamoDB/S3 dentro do free tier permanente. Dois orçamentos
+(gasto zero e US$ 10/mês) alertam por e-mail.
+
+O que o deploy real encontrou: o build da imagem atrasa o gerador ~30 min simulados em relação
+ao checkpoint do bootstrap, e chamados "do passado" saíam com espera fictícia (P90 de 51 min);
+o gerador agora descarta chamados já vencidos ao iniciar (`chamados_pulados`).
+
+## Console ao vivo
+
+`GET /` serve o console: relógio simulado, P50/P90 por zona contra a meta de 15 min, frota por
+estado, fila, controle de velocidade/pausa, mapa com ambulâncias se movendo (posição interpolada
+entre base e chamado por `despachado_em`/`chegada_prevista_em`), feed de eventos de todos os
+serviços (`GET /eventos` lê os JSONL da rodada) e **modo seguir**: clique num chamado ou em
+"Seguir o próximo chamado" para acompanhar a linha do tempo dele (aberto → despachada → a
+caminho → no local → concluído) com a câmera enquadrando. Estado também por WebSocket em
+`/ws/estado`. Sem Docker: `python scripts/dev_api.py` roda tudo em memória num processo.
+
 ## Estado
 
 - [x] D1: núcleo em memória (relógio, fila, repositório com lock otimista, políticas, serviços, métricas)
 - [x] D2: docker compose + LocalStack (SQS/DynamoDB), reaper, análise de rodada
 - [x] D3: OSRM + política `menor_eta` real + matriz pré-computada
-- [ ] D4: Terraform + EC2 + mapa
+- [x] D4: Terraform + EC2 + mapa (console ao vivo, modo seguir)
 - [ ] D5: experimentos A (políticas) e B (frota)
