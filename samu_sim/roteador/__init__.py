@@ -20,6 +20,14 @@ class Roteador(Protocol):
 
     def eta(self, origem: Ponto, destino: Ponto) -> float: ...
 
+    def etas_de(self, origens: list[Ponto], destino: Ponto) -> list[float]:
+        """ETA de varias origens ao mesmo destino (o despachante avalia N candidatas)."""
+        ...
+
+
+def _etas_em_loop(r: Roteador, origens: list[Ponto], destino: Ponto) -> list[float]:
+    return [r.eta(o, destino) for o in origens]
+
 
 class RoteadorHaversine:
     nome = "haversine"
@@ -30,6 +38,9 @@ class RoteadorHaversine:
     def eta(self, origem: Ponto, destino: Ponto) -> float:
         km = haversine_km(origem[0], origem[1], destino[0], destino[1])
         return km / self._vel_kmh * 3600.0
+
+    def etas_de(self, origens: list[Ponto], destino: Ponto) -> list[float]:
+        return _etas_em_loop(self, origens, destino)
 
 
 def _http_get_json(url: str, timeout: float) -> dict:
@@ -64,6 +75,36 @@ class RoteadorOSRM:
             if self._ao_falhar:
                 self._ao_falhar(repr(e))
             return self._fallback.eta(origem, destino)
+
+    def etas_de(self, origens: list[Ponto], destino: Ponto) -> list[float]:
+        """Uma unica requisicao /table (N origens x 1 destino): ~6x mais rapido que N /route.
+        Sem isso, a fator alto a latencia HTTP domina o tempo simulado (medido: 40 routes =
+        210 ms = 17 min sim a fator 5000; 1 table = 34 ms)."""
+        if not origens:
+            return []
+        coords = ";".join(f"{o[1]},{o[0]}" for o in origens) + f";{destino[1]},{destino[0]}"
+        n = len(origens)
+        url = (f"{self._url}/table/v1/driving/{coords}?sources={';'.join(map(str, range(n)))}"
+               f"&destinations={n}&annotations=duration")
+        try:
+            r = self._http_get(url, self._timeout)
+            if r.get("code") != "Ok":
+                raise RuntimeError(f"osrm code={r.get('code')}")
+            linhas = r["durations"]
+        except Exception as e:  # noqa: BLE001
+            self.fallbacks += 1
+            if self._ao_falhar:
+                self._ao_falhar(repr(e))
+            return self._fallback.etas_de(origens, destino)
+        etas = []
+        for o, linha in zip(origens, linhas):
+            d = linha[0] if linha else None
+            if d is None:  # ponto sem rota (ilha, fora do mapa): fallback so para ele
+                self.fallbacks += 1
+                etas.append(self._fallback.eta(o, destino))
+            else:
+                etas.append(float(d))
+        return etas
 
 
 class RoteadorMatriz:
@@ -100,6 +141,9 @@ class RoteadorMatriz:
         if dd > 0:
             aproximacao += self._fallback.eta(self._pontos[pd], destino)
         return float(valor) + aproximacao
+
+    def etas_de(self, origens: list[Ponto], destino: Ponto) -> list[float]:
+        return _etas_em_loop(self, origens, destino)
 
 
 def criar_roteador(nome: str, cfg=None, ao_falhar: Callable[[str], None] | None = None) -> Roteador:

@@ -27,6 +27,9 @@ def test_menor_eta_usa_roteador():
             # quanto mais longe, menor o "eta" -> inverte a ordem de proposito
             return -RoteadorHaversine().eta(o, d)
 
+        def etas_de(self, origens, d):
+            return [self.eta(o, d) for o in origens]
+
     ordem = MenorEta().escolher(CHAMADO, [LONGE, PERTO, MEDIA], RoteadorInvertido())
     assert [a.id for a in ordem] == ["longe", "media", "perto"]
 
