@@ -1,5 +1,7 @@
 """API de observacao e controle da simulacao."""
 import asyncio
+import json
+import threading
 import time
 from dataclasses import asdict
 from pathlib import Path
@@ -18,6 +20,47 @@ from samu_sim.infra.repositorio import Repositorio
 
 
 _STATIC = Path(__file__).parent / "static"
+_EVENTOS_MAX = 5000  # buffer em memoria dos ultimos eventos lidos do event log
+
+
+class _LeitorEventos:
+    """Le incrementalmente os JSONL da rodada (todos os servicos escrevem no mesmo
+    volume) e mantem um buffer ordenado por ts_sim para o feed do front."""
+
+    def __init__(self, pasta: Path):
+        self._pasta = pasta
+        self._offsets: dict[Path, int] = {}
+        self._buffer: list[dict] = []
+        self._lock = threading.Lock()
+
+    def _ler_novos(self) -> None:
+        if not self._pasta.exists():
+            return
+        novos = []
+        for arquivo in self._pasta.glob("*.jsonl"):
+            pos = self._offsets.get(arquivo, 0)
+            with open(arquivo, "rb") as f:
+                f.seek(pos)
+                dados = f.read()
+            if not dados.endswith(b"\n"):  # ultima linha ainda sendo escrita: espera completar
+                corte = dados.rfind(b"\n")
+                dados = dados[: corte + 1] if corte >= 0 else b""
+            self._offsets[arquivo] = pos + len(dados)
+            for linha in dados.decode("utf-8").splitlines():
+                if linha.strip():
+                    try:
+                        novos.append(json.loads(linha))
+                    except json.JSONDecodeError:
+                        continue
+        if novos:
+            self._buffer.extend(novos)
+            self._buffer.sort(key=lambda e: e.get("ts_sim", 0))
+            del self._buffer[:-_EVENTOS_MAX]
+
+    def desde(self, ts_sim: float, limite: int) -> list[dict]:
+        with self._lock:
+            self._ler_novos()
+            return [e for e in self._buffer if e.get("ts_sim", 0) > ts_sim][-limite:]
 
 
 class Controle(BaseModel):
@@ -28,28 +71,45 @@ class Controle(BaseModel):
 
 def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], relogio: Relogio,
               eventlog: EventLog, agora_real=time.time, reaper_timeout_seg: float = 120.0,
-              intervalo_ws_seg: float = 1.0) -> FastAPI:
+              intervalo_ws_seg: float = 1.0, log_dir=None, rodada_id: str | None = None) -> FastAPI:
     app = FastAPI(title="samu-sim")
     app.state.reaper = Reaper(repo, fila_chamados, bases, eventlog, reaper_timeout_seg, agora_real)
     app.state.relogio = relogio
     rodada_inicial = repo.obter_rodada()
     # ultimo fator > 0 visto; enquanto pausada a rodada guarda fator=0 e este valor restaura no despause
     app.state.fator_ativo = rodada_inicial.fator if rodada_inicial and rodada_inicial.fator > 0 else 1.0
+    leitor = _LeitorEventos(Path(log_dir) / rodada_id) if log_dir and rodada_id else None
+    lista_bases = [{"id": b.id, "nome": b.nome, "lat": b.lat, "lon": b.lon} for b in bases.values()]
 
     def snapshot() -> dict:
         rodada = repo.obter_rodada()
         agora = relogio.agora_sim()
-        abertos = [c for c in repo.listar_chamados() if c.status != StatusChamado.ATENDIDO]
+        chamados = {c.id: c for c in repo.listar_chamados()}
+        abertos = [c for c in chamados.values() if c.status != StatusChamado.ATENDIDO]
+        ambulancias = []
+        for a in repo.listar_ambulancias():
+            item = {"id": a.id, "lat": a.lat, "lon": a.lon, "status": str(a.status),
+                    "base_id": a.base_id, "chamado_id": a.chamado_id, "worker_id": a.worker_id,
+                    "destino": None, "despachado_em": None, "chegada_prevista_em": None,
+                    "chegada_em": None, "liberado_em": None}
+            c = chamados.get(a.chamado_id) if a.chamado_id else None
+            if c:  # o front interpola a posicao entre a base e o chamado com estes tempos
+                item.update({"destino": {"lat": c.lat, "lon": c.lon}, "despachado_em": c.despachado_em,
+                             "chegada_prevista_em": c.chegada_prevista_em, "chegada_em": c.chegada_em,
+                             "liberado_em": c.liberado_em})
+            ambulancias.append(item)
         return {
             "agora_sim": agora,
             "fator": rodada.fator if rodada else relogio.fator,
             "pausada": bool(rodada.pausada) if rodada else relogio.pausado,
             "rodada": asdict(rodada) if rodada else None,
-            "ambulancias": [{"id": a.id, "lat": a.lat, "lon": a.lon, "status": str(a.status),
-                             "base_id": a.base_id, "chamado_id": a.chamado_id, "worker_id": a.worker_id}
-                            for a in repo.listar_ambulancias()],
-            "chamados_abertos": [{"id": c.id, "lat": c.lat, "lon": c.lon, "zona": c.zona,
-                                  "status": str(c.status), "criado_em": c.criado_em} for c in abertos],
+            "bases": lista_bases,
+            "ambulancias": ambulancias,
+            "chamados_abertos": [{"id": c.id, "lat": c.lat, "lon": c.lon, "zona": c.zona, "bairro": c.bairro,
+                                  "status": str(c.status), "criado_em": c.criado_em,
+                                  "ambulancia_id": c.ambulancia_id, "despachado_em": c.despachado_em,
+                                  "chegada_prevista_em": c.chegada_prevista_em, "chegada_em": c.chegada_em}
+                                 for c in abertos],
         }
 
     app.state.snapshot = snapshot
@@ -72,6 +132,13 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
     @app.get("/saude")
     def saude():
         return {"ok": True}
+
+    @app.get("/eventos")
+    def eventos(desde: float = -1.0, limite: int = 100):
+        """Ultimos eventos do event log (todos os servicos) com ts_sim > desde."""
+        if leitor is None:
+            return []
+        return leitor.desde(desde, max(1, min(limite, 500)))
 
     @app.get("/estado")
     def estado():

@@ -19,7 +19,8 @@ def main() -> None:
     SincronizadorRelogio(relogio, infra.repo, cfg.sync_relogio_seg, parar).iniciar()
     log = EventLogJsonl(cfg.log_dir, relogio, "api", cfg.rodada_id)
     app = criar_app(infra.repo, infra.fila_chamados, infra.bases, relogio, log,
-                    reaper_timeout_seg=cfg.reaper_timeout_seg)
+                    reaper_timeout_seg=cfg.reaper_timeout_seg, log_dir=cfg.log_dir,
+                    rodada_id=cfg.rodada_id)
 
     def loop_reaper():
         while not parar.wait(cfg.reaper_intervalo_seg):

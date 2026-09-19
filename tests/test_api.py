@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 from samu_sim.api import criar_app
-from samu_sim.core.modelos import Ambulancia, Base, Chamado, Rodada
+from samu_sim.core.modelos import Ambulancia, Base, Chamado, Rodada, StatusChamado as SC
 from samu_sim.core.relogio import Relogio
 from samu_sim.eventlog import EventLogMemoria
 from samu_sim.infra.fila import FilaMemoria
@@ -71,3 +71,44 @@ def test_ws_estado_envia_snapshot():
     with c.websocket_connect("/ws/estado") as ws:
         dados = ws.receive_json()
     assert "ambulancias" in dados and dados["ambulancias"][0]["id"] == "amb-1"
+
+
+def test_snapshot_traz_bases_e_destino_da_ambulancia_despachada():
+    c, repo, relogio, t = montar()
+    repo.reservar_ambulancia("amb-1", 0, "ch-1")
+    ch = repo.obter_chamado("ch-1")
+    ch.status = SC.DESPACHADO
+    ch.ambulancia_id = "amb-1"
+    ch.despachado_em = 10.0
+    ch.chegada_prevista_em = 610.0
+    repo.salvar_chamado(ch)
+    e = c.get("/estado").json()
+    assert e["bases"][0]["id"] == "b1" and e["bases"][0]["nome"] == "B"
+    amb = e["ambulancias"][0]
+    assert amb["destino"] == {"lat": 1.0, "lon": 2.0}
+    assert amb["despachado_em"] == 10.0 and amb["chegada_prevista_em"] == 610.0
+
+
+def test_eventos_le_jsonl_da_rodada_incrementalmente(tmp_path):
+    import json
+    repo = RepositorioMemoria()
+    t = {"v": 1000.0}
+    relogio = Relogio(fator=10, agora_real=lambda: t["v"])
+    repo.salvar_rodada(Rodada("atual", 1, "mais_proxima", 10, 2, "haversine", 1000.0, 0.0))
+    pasta = tmp_path / "r1"
+    pasta.mkdir()
+    (pasta / "despachante-x.jsonl").write_text(
+        json.dumps({"ts_sim": 5, "tipo": "despachada", "chamado_id": "ch-1", "ambulancia_id": "amb-1"}) + "\n"
+        + json.dumps({"ts_sim": 9, "tipo": "chegou", "chamado_id": "ch-1", "ambulancia_id": "amb-1"}) + "\n",
+        encoding="utf-8")
+    (pasta / "gerador.jsonl").write_text(
+        json.dumps({"ts_sim": 1, "tipo": "chamado_criado", "chamado_id": "ch-1"}) + "\n", encoding="utf-8")
+    app = criar_app(repo, FilaMemoria(), {}, relogio, EventLogMemoria(relogio, "api"),
+                    log_dir=tmp_path, rodada_id="r1")
+    c = TestClient(app)
+    r = c.get("/eventos").json()
+    assert [e["tipo"] for e in r] == ["chamado_criado", "despachada", "chegou"]
+    assert c.get("/eventos?desde=5").json()[0]["tipo"] == "chegou"
+    with open(pasta / "gerador.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps({"ts_sim": 12, "tipo": "chamado_criado", "chamado_id": "ch-2"}) + "\n")
+    assert c.get("/eventos?desde=9").json()[0]["chamado_id"] == "ch-2"

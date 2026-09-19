@@ -62,6 +62,7 @@ class Chamado:
     criado_em: float
     status: StatusChamado = StatusChamado.PENDENTE
     despachado_em: float | None = None
+    chegada_prevista_em: float | None = None  # despachado_em + ETA (para o mapa)
     chegada_em: float | None = None
     liberado_em: float | None = None
     ambulancia_id: str | None = None
