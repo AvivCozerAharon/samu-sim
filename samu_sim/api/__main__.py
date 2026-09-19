@@ -4,6 +4,7 @@ import threading
 import uvicorn
 
 from samu_sim.api import criar_app
+from samu_sim.cenarios import criar_gerenciador
 from samu_sim.core.config import Config
 from samu_sim.core.runtime import (SincronizadorRelogio, configurar_logging, montar_infra,
                                    relogio_da_rodada)
@@ -20,7 +21,8 @@ def main() -> None:
     log = EventLogJsonl(cfg.log_dir, relogio, "api", cfg.rodada_id)
     app = criar_app(infra.repo, infra.fila_chamados, infra.bases, relogio, log,
                     reaper_timeout_seg=cfg.reaper_timeout_seg, log_dir=cfg.log_dir,
-                    rodada_id=cfg.rodada_id, turnos_path="docs/experimentos/turnos.json")
+                    rodada_id=cfg.rodada_id, turnos_path="docs/experimentos/turnos.json",
+                    gerenciador_cenarios=criar_gerenciador(), expansao_path="docs/experimentos/expansao.json")
 
     def loop_reaper():
         while not parar.wait(cfg.reaper_intervalo_seg):
