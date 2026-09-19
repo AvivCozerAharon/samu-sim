@@ -80,3 +80,14 @@ def test_gerenciador_registra_erro():
     assert "boom" in g.obter(i)["erro"]
     assert g.obter("nada") is None
     g.encerrar()
+
+
+def test_criar_gerenciador_limita_fator(monkeypatch):
+    from samu_sim import cenarios as mod
+    chamadas = []
+    monkeypatch.setattr(mod, "executar", lambda c, s, d, f, fn: chamadas.append(f) or {"resumo": {}})
+    g = mod.criar_gerenciador(fator_max=500)
+    i = g.submeter(Cenario("x"), [1], 10, 3000)
+    esperar(g, [i])
+    assert chamadas == [500]
+    g.encerrar()

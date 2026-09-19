@@ -168,6 +168,9 @@ isso em instrumento:
   O console tem a seção **"E se…?"**: escolhe frota/política/seeds/duração, submete e seleciona dois
   cenários concluídos pra ver a diferença com IC.
 - CLI: `python scripts/cenarios.py --base '{"nome":"73"}' --alt '{"nome":"80","n_ambulancias":80}'`.
+- Armadilha medida: o relógio acelerado precisa de CPU. Na t3.micro, o mesmo cenário a fator 3000 deu
+  P90 44 min onde o correto (local, ou fator 500) é 19 — o processamento fica pra trás do relógio e os
+  tempos saem inflados. Por isso `CENARIOS_FATOR_MAX` (500 na AWS): um job de 5 seeds × 24 h leva ~15 min lá.
 
 ## Decisões de arquitetura (e o que mudou)
 

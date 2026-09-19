@@ -19,6 +19,7 @@ x-servico: &servico
     S3_BUCKET: ${S3_BUCKET:-}
     REPOSICIONAMENTO: ${REPOSICIONAMENTO:-0}
     TRANSITO: ${TRANSITO:-0}
+    CENARIOS_FATOR_MAX: ${CENARIOS_FATOR_MAX:-500}
   volumes:
     - ./logs:/logs
   depends_on:
