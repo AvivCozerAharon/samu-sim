@@ -34,6 +34,8 @@ class Config:
     transito: bool = False  # multiplica o ETA pelo fator de transito da hora simulada
     reposicionamento: bool = False  # ambulancia livre vai para a base de maior demanda prevista
     demanda_path: str = "dados/demanda_prevista.json"
+    # teto do fator dos jobs de cenario: o relogio acelerado exige CPU (numa t3.micro, 3000 distorce; 500 nao)
+    cenarios_fator_max: float = 2000.0
     reset: bool = False  # bootstrap: apaga e re-semeia mesmo se ja houver rodada
 
     @classmethod

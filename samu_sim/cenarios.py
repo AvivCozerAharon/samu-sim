@@ -79,11 +79,13 @@ def comparar(base: dict, alt: dict) -> dict:
             for k in METRICAS}
 
 
-def criar_gerenciador() -> "GerenciadorCenarios":
-    """Gerenciador ligado ao runner em memoria (local.rodar, roteador matriz)."""
+def criar_gerenciador(fator_max: float = 2000.0) -> "GerenciadorCenarios":
+    """Gerenciador ligado ao runner em memoria (local.rodar, roteador matriz). `fator_max` protege
+    contra CPU insuficiente: se a maquina nao acompanha o relogio acelerado, os tempos de resposta
+    saem inflados (medido: fator 3000 numa t3.micro deu P90 44 min onde o correto era 19)."""
     from samu_sim import local as runner  # import tardio: a API nao precisa do runner para subir
     runner.INTERVALO_OCIOSO_REAL = 0.005  # polling fino: a fator 2000, 20 ms reais = 40 s simulados
-    return GerenciadorCenarios(lambda c, seeds, dur, fator: executar(c, seeds, dur, fator, runner.rodar))
+    return GerenciadorCenarios(lambda c, seeds, dur, fator: executar(c, seeds, dur, min(fator, fator_max), runner.rodar))
 
 
 class GerenciadorCenarios:
