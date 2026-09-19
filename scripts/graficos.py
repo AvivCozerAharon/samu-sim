@@ -42,7 +42,7 @@ def grafico_a(res: dict, saida: Path) -> None:
     ax.set_xticks(range(len(ZONAS)), ZONAS)
     ax.set_ylabel("P90 do tempo de resposta (min)")
     c = res["config"]
-    ax.set_title(f"A · política de despacho × zona — 50 ambulâncias, {c['chamados_por_dia']} chamados/dia, "
+    ax.set_title(f"A · política de despacho × zona — {c.get('frota_a', 50)} ambulâncias (frota real), {c['chamados_por_dia']} chamados/dia, "
                  f"{len(c['seeds'])} seed(s)", loc="left", fontsize=11)
     ax.legend(loc="upper left")
     fig.tight_layout()
