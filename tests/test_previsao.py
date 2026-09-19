@@ -41,8 +41,8 @@ def test_reposicionador_escolhe_zona_com_mais_demanda_e_menos_cobertura():
     # de madrugada a demanda do Oeste cai; com 3 livres no Sul ainda compensa ir ao Oeste (0 livres)
     alvo2, _ = r.escolher_base((-22.95, -43.22), agora_sim=3 * 3600, base_atual="sul")
     assert alvo2.id == "oeste"
-    # se o Oeste ja tem cobertura, a pressao nao justifica a viagem (ganho < 1,5x): fica na base atual
-    for i in range(6):
+    # se o Oeste ja tem cobertura de sobra, a pressao nao justifica a viagem (ganho < 1,5x): fica na base atual
+    for i in range(20):
         repo.salvar_ambulancia(Ambulancia(id=f"o{i}", base_id="oeste", lat=-22.93, lon=-43.25, worker_id="w0"))
     alvo3, _ = r.escolher_base((-22.95, -43.22), agora_sim=18 * 3600, base_atual="sul")
     assert alvo3.id == "sul"
