@@ -20,6 +20,18 @@ class StatusChamado(StrEnum):
 
 PRIORIDADES = ("vermelho", "amarelo", "verde")  # ordem de atendimento (mais grave primeiro)
 
+# Zonas do simulador = Areas de Planejamento (AP) da prefeitura. As chaves sao curtas e ficam
+# nos dados e no event log; o rotulo diz a AP, porque no Rio "Zona Oeste" costuma incluir a
+# Barra e Jacarepagua (AP4), que aqui ficam separadas da AP5 (Bangu, Campo Grande, Santa Cruz).
+ZONAS = ("Centro", "Sul", "Norte", "Barra", "Oeste")
+ROTULO_ZONA = {
+    "Centro": "Centro (AP1)",
+    "Sul": "Sul (AP2.1)",
+    "Norte": "Norte (AP2.2 e AP3)",
+    "Barra": "Barra e Jacarepaguá (AP4)",
+    "Oeste": "Oeste (AP5)",
+}
+
 TRANSICOES_VALIDAS: set[tuple[StatusAmbulancia, StatusAmbulancia]] = {
     (StatusAmbulancia.DISPONIVEL, StatusAmbulancia.RESERVADA),
     (StatusAmbulancia.RESERVADA, StatusAmbulancia.A_CAMINHO),
@@ -79,6 +91,10 @@ class Chamado:
     liberado_em: float | None = None
     ambulancia_id: str | None = None
     tentativas: int = 0
+    # outbox: salvar o chamado e publicar na fila sao duas escritas; o reaper republica
+    # o PENDENTE que ficou sem publicar (processo morreu entre as duas)
+    publicado: bool = False
+    ocorrencia_id: str | None = None  # varias vitimas do mesmo evento (um chamado por vitima)
 
 
 @dataclass

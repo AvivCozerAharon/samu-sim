@@ -16,7 +16,7 @@ x-servico: &servico
     ROTEADOR: ${ROTEADOR:-haversine}
     OSRM_URL: http://osrm:5000
     REPOSICIONAMENTO: ${REPOSICIONAMENTO:-0}
-    TRANSITO: ${TRANSITO:-0}
+    TRANSITO: ${TRANSITO:-1}  # fator de transito por hora; 0 desliga
     CENARIOS_FATOR_MAX: ${CENARIOS_FATOR_MAX:-2000}
   volumes:
     - ./logs:/logs

@@ -5,7 +5,7 @@ ferramenta de apoio à decisão: *qual política de despacho reduz o tempo de re
 Oeste?*, *a partir de quantas ambulâncias o ganho é marginal?* e *onde abrir a próxima base?* —
 cada resposta com intervalo de confiança.
 
-Chamados sintéticos (proporcionais à população por bairro, com picos de manhã e à noite) entram
+Chamados sintéticos (proporcionais à população por bairro, com picos por volta de 12 h e 20 h) entram
 numa fila **SQS**; N **despachantes** concorrentes escolhem a ambulância por uma política plugável e
 disputam a reserva com **lock otimista** no **DynamoDB**; **workers** simulam o deslocamento pela
 malha viária real (OSRM) em tempo acelerado; um **reaper** recupera ambulâncias de workers mortos;
@@ -13,6 +13,12 @@ uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memóri
 `docker compose` com LocalStack, e numa EC2 com SQS/DynamoDB/S3 reais via Terraform.
 
 ## Resultados
+
+> **Em refação (D10).** As tabelas abaixo são da calibração anterior: 600 chamados/dia (o número
+> incluía transferências entre hospitais; a demanda de emergência é ~490/dia) e relógio a 2000×,
+> velocidade em que o próprio simulador fica atrás do relógio e infla o P90 em 1–2 min (a mesma
+> seed deu P90 de 16,9, 17,1 e 21,7 min; a 500×, 14,9 e 15,0). Os scripts já usam 490/dia e 500×;
+> falta rodar de novo e atualizar os números.
 
 ![política × zona](docs/img/a_politicas_p90_zona.png)
 ![tamanho da frota](docs/img/b_frota_p90.png)
@@ -43,13 +49,15 @@ uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memóri
   80 batem. Ou seja: o problema do P90 no Rio é mais via do que frota.
 - **A política paga na Zona Oeste.** Despachar pela linha reta custa 4 min de P90 lá (16 → 12 com a
   malha viária), porque o Maciço da Pedra Branca e a baía de Sepetiba tornam a "mais próxima" enganosa;
-  no resto da cidade a diferença some. Em regime saturado (50 ambulâncias) a diferença era de 40 → 17 min.
+  no resto da cidade a diferença some.
 - **"Não esvaziar a base" piorou.** A política com penalidade de cobertura manda uma ambulância mais
   longe para preservar a base — e o custo de resposta supera o ganho de cobertura. Um resultado negativo
   útil: a intuição estava errada, e só a medição mostrou.
 
-**Validação distribuída:** o mesmo cenário rodado na AWS — EC2 com 6 containers, SQS e DynamoDB
-reais — reproduziu o modelo em memória com < 2 % de diferença (`scripts/experimento_aws.sh`).
+**Validação distribuída (D5, modelo anterior):** o mesmo cenário rodado na AWS — EC2 com 6
+containers, SQS e DynamoDB reais — contra o modelo em memória, 1 seed, 6 h simuladas, 50 ambulâncias
+e 19 bairros: P90 29,7 × 29,5 min (< 1 %), P50 8,3 × 7,8 min (~6 %) (`scripts/experimento_aws.sh`).
+Não foi refeita depois dos dados reais (D6); é o próximo teste a repetir.
 
 ## Realismo operacional (D8): o que cada correção do modelo mudou
 
@@ -172,6 +180,74 @@ isso em instrumento:
   P90 44 min onde o correto (local, ou fator 500) é 19 — o processamento fica pra trás do relógio e os
   tempos saem inflados. Por isso `CENARIOS_FATOR_MAX` (500 na AWS): um job de 5 seeds × 24 h leva ~15 min lá.
 
+## Caos e invariantes (D11): o sistema se mantém correto quando tudo dá errado?
+
+O objetivo do projeto é o sistema distribuído, então o "resultado" que mais importa não é o P90:
+é **provar que nenhuma falha deixa o estado errado**.
+
+- **Fila caótica** (`samu_sim/infra/fila_caotica.py`): mesma interface da `Fila`, e injeta com
+  seed as falhas que o SQS e os processos permitem: mensagem duplicada, atrasada, fora de ordem,
+  ack perdido (consumidor morreu depois de processar) e processo que morre ao publicar.
+- **Workers que caem e congelam**: `derrubar()`/`reviver()` simula o `docker restart` (a memória
+  dos ciclos se perde); `pausar()`/`retomar()` simula uma pausa de GC ou VM travada (a memória
+  fica, e o ciclo antigo tenta continuar).
+- **Verificador de invariantes** (`samu_sim/invariantes.py`), só com checagens exatas. A ordem
+  entre logs de processos diferentes é ambígua, então a sequência de cada ambulância é ordenada
+  pela **versão do registro**, que o lock otimista incrementa:
+
+| | invariante |
+|---|---|
+| I1 | cada ambulância segue a máquina de estados, um chamado por vez |
+| I2 | cada chamado é concluído exatamente uma vez |
+| I3 | depois de drenar, nenhum chamado ficou sem atendimento |
+| I4 | depois de drenar, nenhuma ambulância ficou presa |
+| I5 | cada chamado recebe uma ambulância, mais uma por vez que o reaper o devolveu |
+
+`python scripts/caos.py --rodadas 20` roda o sistema inteiro sob caos (12 h simuladas por rodada),
+desliga as falhas, espera drenar e julga. **Antes das correções abaixo: 1 de 4 rodadas limpa.
+Depois: 20 de 20**, com centenas de duplicatas, atrasos, acks perdidos, processos mortos ao
+publicar e quedas de worker por rodada.
+
+O que o caos achou (e que nenhum teste unitário tinha pegado):
+
+| bug | como aparecia | correção |
+|---|---|---|
+| **Worker reiniciado segurava ambulâncias para sempre** | I4: ambulância presa em `no_local` | o heartbeat listava todas as não disponíveis do worker no banco; o worker novo mantinha vivas as do ciclo que morreu com o processo anterior. Agora só fala pelas que têm ciclo em voo *neste* processo (e sai um scan por heartbeat) |
+| **Gerador reiniciado perdia chamados** | I3: chamado `nunca_salvo` | ao subir, ele pulava os chamados atrasados > 60 s (regra feita para a primeira subida). Num restart, retoma sem pular |
+| **Gerador reiniciado sobrescrevia chamado despachado** | I5 (janela estreita) | `criar_chamado` condicional (`attribute_not_exists(id)`): nunca sobrescreve |
+| **Ciclo pausado passava pelo lock otimista** | I1: `chegou` com a ambulância livre | o ciclo relia a versão *atual* do banco antes de cada transição; depois de uma pausa em que o reaper reatribuiu a ambulância, o ciclo zumbi a movia. Agora cada ciclo carrega a versão da sua última transição, que funciona como fencing token (`ciclo_obsoleto`) |
+| **Despachante mandava trabalho para worker morto** | no mapa: ambulância indo e voltando | o reaper liberava a ambulância, o despachante a reservava de novo (a mais próxima) e ela ficava presa outra vez. Agora os workers anunciam o próprio heartbeat e o reaper **passa as ambulâncias de um worker morto para um vivo**, e reequilibra quando ele volta |
+| **Reaper teletransportava a ambulância para a base** | no mapa: salto para trás | libera onde ela estaria, pela mesma interpolação do mapa (partida, destino, horários previstos) |
+| **Log do despacho sumia se o processo morresse ao publicar** | I1 (falso positivo) | o evento `despachada` descreve a escrita no banco, então é gravado antes de publicar |
+
+### Laboratório de falhas no console
+
+`python scripts/dev_api.py` (73 ambulâncias, 490 chamados/dia, trânsito ligado) abre o console com
+a aba **Laboratório**: liga as falhas da fila com taxas ajustáveis, derruba ou congela workers,
+põe mais despachantes disputando a frota, marca no mapa uma **ocorrência com várias vítimas** (um
+chamado por vítima, no mesmo ponto e hora: a disputa pelas ambulâncias próximas aparece sozinha) e
+mostra cada falha injetada ao lado do mecanismo que a resolveu. "Drenar e verificar" desliga o caos,
+acelera o relógio e julga as cinco invariantes. No livro de ocorrências, o que você injeta aparece
+como **falha** e o que o sistema fez como **sistema**. Heartbeat e reaper usam 2 s e 6 s reais no
+laboratório, para a recuperação acontecer na frente de quem assiste.
+
+## Consistência sob falha (D10): o que uma revisão do código achou
+
+Cinco pontos em que duas escritas concorrentes, ou um processo morrendo no meio, deixavam o estado
+errado. Nenhum aparecia nos experimentos em memória; todos apareceriam em produção.
+
+| problema | onde | correção | teste |
+|---|---|---|---|
+| **Reaper devolvia chamado já redespachado.** Se a ambulância A travou e o chamado já tinha sido redespachado para B, o reaper voltava o chamado a PENDENTE e ele seria despachado de novo | `api/reaper.py` | só devolve se o chamado ainda for da ambulância liberada, com escrita condicional | `test_nao_devolve_chamado_ja_redespachado_para_outra_ambulancia` |
+| **Escritas no chamado sem condição.** Despachante, worker e reaper gravavam o chamado inteiro (`put_item`); a última escrita apagava a outra | `infra/repositorio.py`, `infra/aws.py` | `salvar_chamado_se(c, status, ambulancia_id)`: `ConditionExpression` em status + dono, como já era nas ambulâncias. O worker que perde para o reaper encerra o ciclo (`chamado_retomado`) | `test_salvar_chamado_se_*`, `test_worker_para_o_ciclo_se_o_chamado_foi_retomado` |
+| **Mensagem duplicada em corrida mandava duas ambulâncias.** Dois despachantes liam o mesmo chamado PENDENTE ao mesmo tempo e reservavam ambulâncias diferentes | `despachante/servico.py` | a gravação DESPACHADO é condicional a PENDENTE; quem perde desfaz a própria reserva (`despacho_duplicado_evitado`) | `test_mensagem_duplicada_em_corrida_desfaz_a_segunda_reserva` |
+| **Inversão de prioridade.** Vermelho sem ambulância ficava invisível pelo visibility timeout (30 s reais) e, nesse intervalo, o despachante atendia verdes | `despachante/servico.py`, `infra/fila.py` | `Fila.adiar` (`ChangeMessageVisibility`): volta em 2 s; até lá o despachante não desce de prioridade | `test_sem_ambulancia_para_vermelho_segura_os_verdes_e_volta_rapido` |
+| **Dual write no gerador.** Salvar o chamado e publicar na fila são duas escritas; morrer entre elas deixava um chamado que ninguém despacha | `gerador/servico.py`, `api/reaper.py` | outbox no próprio registro: `publicado=False` até a fila confirmar; o reaper republica o PENDENTE que continua sem publicar em duas passadas seguidas (duplicata é inofensiva, o despachante é idempotente) | `test_republica_pendente_que_nunca_foi_publicado_na_segunda_passada` |
+
+E um limite que faltava: `POST /controle` aceitava qualquer fator, embora acima de ~2000 o próprio
+simulador vire o gargalo (a 3000 na t3.micro, o P90 medido sobe de 19 para 44 min). Agora usa o mesmo
+teto dos cenários (`CENARIOS_FATOR_MAX`: 2000 local, 500 na AWS) e recusa com 422.
+
 ## Decisões de arquitetura (e o que mudou)
 
 | Decisão | Por quê | O que aprendi |
@@ -179,7 +255,7 @@ isso em instrumento:
 | Tempo real acelerado (fator 1–200) em vez de simulação a eventos discretos | os problemas de concorrência têm que existir de verdade | o relógio distribuído é a parte mais traiçoeira: wall-clock salta (VM), então cada serviço sincroniza uma vez e avança com `monotonic` |
 | SQS + DynamoDB desde o dia 1 (LocalStack) | um só código local e na AWS | SQS *standard* é at-least-once e sem ordem: idempotência por chamado + máquina de estados com versão resolveram |
 | Lock otimista (`ConditionExpression` em `status` e `versao`) | N despachantes disputam a mesma ambulância | corridas perdidas são contadas (`reserva_falhou`), nunca escondidas |
-| Heartbeat + reaper em vez de lease/lock distribuído | simples e observável | o reaper expôs 2 bugs (heartbeat na reserva; mensagem antiga após reatribuição) |
+| Heartbeat + reaper em vez de lease/lock distribuído | simples e observável | o reaper expôs 2 bugs (heartbeat na reserva; mensagem antiga após reatribuição); um terceiro (devolver chamado já redespachado) foi corrigido no D10 com escrita condicional, que é o que um fencing token daria |
 | Roteador com 3 implementações (haversine → OSRM → matriz) | funcionar no dia 1, medir depois | a reta subestima o P90 da Zona Oeste em 22%; `/table` em lote resolveu o gargalo de 40 `/route` por despacho |
 | Métricas a partir do event log JSONL | uma fonte de verdade; vira dataset | o mesmo log alimenta o feed do console, o `analisar_rodada.py` e os experimentos |
 | EC2 t3.micro + compose (não Fargate) | custo zero | o build na instância atrasa o gerador ~30 min sim: chamados "do passado" precisam ser descartados |
@@ -188,7 +264,8 @@ isso em instrumento:
 
 - **Relógio lógico** (ticks) em vez de tempo real acelerado: reprodutibilidade exata e rodadas
   em segundos; custa uma barreira de sincronização entre serviços.
-- **Fargate + ALB** no lugar da EC2 única; **WebSocket + React** no lugar do polling.
+- **Fargate + ALB** no lugar da EC2 única; métricas e eventos do console por WebSocket, como o
+  estado já é (hoje `/metricas` e `/eventos` são polling).
 - **Trânsito real** (COR/Waze por corredor e hora) no lugar do perfil estimado — é a variável que
   mais muda a conclusão, e a menos calibrada.
 - **Reposicionamento com objetivo explícito** (cobertura garantida por zona, não pressão relativa) —
@@ -234,7 +311,7 @@ cada serviço relê a cada 10 s, então `POST /controle` muda o fator em todos s
 |---|---|---|
 | Worker morre | `docker compose kill ambulancia-w1` | após ~2–3 min, `reaper_liberou` em `logs/local/api.jsonl`; chamado volta pra fila |
 | Despachante morre com msg em mãos | `docker compose kill despachante && docker compose start despachante` | `chamado_ja_despachado` nos logs; `analisar_rodada.py` sem `despachos_duplicados` |
-| Corrida entre despachantes | 2 réplicas + `FATOR=200` | `reserva_falhou` > 0 nos logs, nunca 2 `despachada` pro mesmo chamado |
+| Corrida entre despachantes | 2 réplicas + `FATOR=200` | `reserva_falhou` > 0 nos logs, nunca 2 `despachada` pro mesmo chamado (se a corrida for pela mesma mensagem duplicada: `despacho_duplicado_evitado`) |
 
 O `bootstrap` é idempotente: se já existe uma rodada ele não mexe em nada (`docker compose start`
 re-executa one-shots). Para recomeçar: `docker compose down -v` ou `RESET=1`.
@@ -293,8 +370,8 @@ isso). Solução: `Roteador.etas_de(origens, destino)` em lote — 1 chamada `/t
 
 Mesmo código, sem LocalStack: `docker-compose.aws.yml` numa **EC2 t3.micro** falando com
 SQS, DynamoDB e S3 reais pelo *instance profile* (nenhuma credencial na máquina). Tudo criado
-por Terraform em `infra/` (15 recursos): filas, tabelas on-demand, bucket de logs, role/perfil
-IAM com permissão só nesses recursos, security group com 22 e 8000 abertos só para o seu IP,
+por Terraform em `infra/` (17 recursos): 5 filas, 3 tabelas on-demand, bucket de logs, role/perfil
+IAM com permissão só nesses recursos, security group com 22, 8000 e 8100 (a `mesa`) só para o seu IP,
 e a instância com *user-data* que instala Docker, clona o repo e sobe o compose.
 
 ```bash
@@ -306,8 +383,8 @@ bash scripts/coletar_logs_ec2.sh           # event log -> S3 -> logs/
 terraform -chdir=infra destroy -auto-approve   # no fim da sessao
 ```
 
-Custo: t3.micro ≈ US$ 0,01/h; SQS/DynamoDB/S3 dentro do free tier permanente. Dois orçamentos
-(gasto zero e US$ 10/mês) alertam por e-mail.
+Custo: t3.micro ≈ US$ 0,01/h; SQS/DynamoDB/S3 dentro do free tier permanente. Alertas de orçamento
+(AWS Budgets) não estão no Terraform: crie no console.
 
 O que o deploy real encontrou: o build da imagem atrasa o gerador ~30 min simulados em relação
 ao checkpoint do bootstrap, e chamados "do passado" saíam com espera fictícia (P90 de 51 min);
@@ -334,3 +411,6 @@ caminho → no local → concluído) com a câmera enquadrando. Estado também p
 - [x] D7: filas por prioridade, otimizador de turnos (alocação por base), console de turnos
 - [x] D8: despachável ao liberar, previsão de demanda + reposicionamento, trânsito por hora (ablação medida)
 - [x] D9: cenários com IC (bootstrap, diferença pareada por seed, `POST /cenarios`), experimento D (onde abrir a próxima base)
+- [x] D10: demanda recalibrada sem transferências (490/dia), zonas por Área de Planejamento, consistência sob falha (escrita condicional do chamado, outbox, sem inversão de prioridade, teto do fator)
+- [x] D11: fila caótica, verificador de invariantes (`scripts/caos.py`), fencing por versão, rebalanceamento de ambulâncias entre workers, laboratório de falhas no console, trânsito ligado por padrão, console redesenhado
+- [ ] refazer os experimentos A–E a 490/dia e 500× e atualizar as tabelas

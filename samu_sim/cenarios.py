@@ -12,10 +12,10 @@ import traceback
 import uuid
 from dataclasses import asdict, dataclass
 
-from samu_sim.core.modelos import Base
+from samu_sim.core.modelos import ZONAS, Base
 from samu_sim.estatistica import diferenca_pareada, ic_bootstrap
+from samu_sim.gerador.demanda import CHAMADOS_POR_DIA_RIO
 
-ZONAS = ("Centro", "Sul", "Norte", "Barra", "Oeste")
 METRICAS = ("p90", "p50", "p90_vermelho", "pendentes") + ZONAS
 
 
@@ -56,7 +56,7 @@ def extrair(r: dict) -> dict:
 
 
 def executar(cenario: Cenario, seeds: list[int], duracao_sim_seg: float, fator: float, rodar_fn,
-             chamados_por_dia: int = 600, roteador: str = "matriz") -> dict:
+             chamados_por_dia: int = CHAMADOS_POR_DIA_RIO, roteador: str = "matriz") -> dict:
     inicio = time.time()
     por_seed = []
     for s in seeds:

@@ -17,6 +17,7 @@ class Fila(Protocol):
     def publicar(self, corpo: dict) -> None: ...
     def receber(self, max_msgs: int = 10) -> list[Mensagem]: ...
     def ack(self, msg: Mensagem) -> None: ...
+    def adiar(self, msg: Mensagem, seg: float) -> None: ...
 
 
 @dataclass
@@ -51,6 +52,14 @@ class FilaMemoria:
     def ack(self, msg: Mensagem) -> None:
         with self._lock:
             self._itens = [i for i in self._itens if i.msg.id != msg.id]
+
+    def adiar(self, msg: Mensagem, seg: float) -> None:
+        """Como ChangeMessageVisibility: a mensagem em voo volta a ficar visivel em `seg`."""
+        with self._lock:
+            for item in self._itens:
+                if item.msg.id == msg.id:
+                    item.visivel_em = self._agora() + seg
+                    return
 
     def tamanho(self) -> int:
         with self._lock:

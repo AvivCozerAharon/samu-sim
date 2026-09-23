@@ -50,3 +50,37 @@ def test_pula_chamados_ja_no_passado_ao_iniciar():
     assert [m.corpo["chamado_id"] for m in fila.receber()] == ["ch-3", "ch-4"]
     assert log.contar("chamados_pulados") == 1
     assert log.eventos[0]["quantidade"] == 2
+
+
+def test_marca_publicado_depois_de_publicar():
+    relogio = Relogio(fator=100000)
+    fila, repo = FilaMemoria(), RepositorioMemoria()
+    svc = ServicoGerador([ch(1, 10)], fila, repo, relogio, EventLogMemoria(relogio, "gerador"))
+    svc.executar(threading.Event())
+    assert repo.obter_chamado("ch-1").publicado is True
+
+
+def test_reinicio_no_meio_da_rodada_nao_sobrescreve_nem_perde_chamado():
+    from samu_sim.core.modelos import StatusChamado as SC
+    relogio = Relogio(fator=1)
+    relogio.sincronizar(relogio.checkpoint()[0], 1000.0, 1)  # agora_sim ~ 1000
+    fila, repo = FilaMemoria(), RepositorioMemoria()
+    log = EventLogMemoria(relogio, "gerador")
+    # antes de cair, o gerador ja tinha publicado ch-1, que foi despachado
+    repo.salvar_chamado(Chamado(id="ch-1", lat=0, lon=0, bairro="B", zona="Sul", criado_em=10,
+                                status=SC.DESPACHADO, ambulancia_id="amb-1", publicado=True))
+    svc = ServicoGerador([ch(1, 10), ch(2, 20)], fila, repo, relogio, log)  # ch-2: 980 s atrasado
+    assert svc.executar(threading.Event()) == 1
+    assert repo.obter_chamado("ch-1").status == SC.DESPACHADO  # nao sobrescreveu
+    assert repo.obter_chamado("ch-2") is not None               # nao pulou o atrasado
+    assert [m.corpo["chamado_id"] for m in fila.receber()] == ["ch-2"]
+
+
+def test_primeira_subida_atrasada_ainda_pula_o_passado():
+    relogio = Relogio(fator=1)
+    relogio.sincronizar(relogio.checkpoint()[0], 1000.0, 1)
+    fila, repo = FilaMemoria(), RepositorioMemoria()
+    log = EventLogMemoria(relogio, "gerador")
+    svc = ServicoGerador([ch(1, 10), ch(2, 999)], fila, repo, relogio, log)
+    assert svc.executar(threading.Event()) == 1
+    assert repo.obter_chamado("ch-1") is None and log.contar("chamados_pulados") == 1

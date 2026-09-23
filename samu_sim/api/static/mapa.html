@@ -2,204 +2,320 @@
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>samu-sim — despacho ao vivo</title>
+<title>samu-sim · despacho ao vivo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23FF5A5F'/><rect x='13' y='7' width='6' height='18' fill='white'/><rect x='7' y='13' width='18' height='6' fill='white'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2315202A'/><rect x='13' y='6' width='6' height='20' fill='%23D9431F'/><rect x='6' y='13' width='20' height='6' fill='%23D9431F'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root{
-    --bg:#0F1923; --painel:#182430; --linha:#23313F; --texto:#E8EEF4; --apagado:#8A9BAE;
-    --disp:#3DDC97; --res:#FFC857; --cam:#FF5A5F; --loc:#B388FF; --ret:#4FC3F7; --cham:#FF8A3D;
-    --meta:#FFC857; --sist:#FF5A5F;
-    --lateral:340px; --feed:300px;
+    /* papel e tinta: um livro de ocorrencias, nao um painel neon */
+    --papel:#F1F0EB; --painel:#FAF9F6; --linha:#DAD9D2; --linha-forte:#B8B7AF;
+    --tinta:#15202A; --tinta2:#47535D; --apagado:#7A848B;
+    --samu:#D9431F; --samu-claro:#F4D3C8;        /* unica cor de sinal: deslocamento, alerta */
+    --bom:#2D6B4A;                                /* diferenca significativa, meta cumprida */
+    --verm:#B3261E; --amar:#C98F00; --verde:#2E7D4F;  /* triagem: semantica do dominio */
+    --cinza:#A7AEB2;
+    --lateral:344px; --feed:318px;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--texto);
-    font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
+  html,body{height:100%;margin:0;background:var(--papel);color:var(--tinta);
+    font-family:var(--sans);font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
   #app{display:grid;grid-template-columns:var(--lateral) 1fr var(--feed);height:100%}
-  #mapa{height:100%;background:#0b131b}
-  .leaflet-container{background:#0b131b;font:inherit}
-  .leaflet-tile-pane{filter:invert(1) hue-rotate(190deg) saturate(.12) brightness(.55) contrast(1.05)}
-  .leaflet-tooltip{background:var(--painel);color:var(--texto);border:1px solid var(--linha);border-radius:4px;font-size:12px;padding:3px 8px}
-  .leaflet-tooltip-top:before{border-top-color:var(--linha)}
-  .leaflet-popup-content-wrapper{background:var(--painel);color:var(--texto);border:1px solid var(--linha);border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.5)}
-  .leaflet-popup-tip{background:var(--painel)}
-  .leaflet-popup-content{margin:10px 14px;font:13px/1.5 "IBM Plex Sans",sans-serif;min-width:200px}
-  .leaflet-popup-content b{font-weight:600}
-  .leaflet-popup-content dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0 0}
+  #mapa{height:100%;background:#E4E3DD}
+  .leaflet-container{background:#E4E3DD;font:inherit}
+  /* mapa-base em cinza e apagado: quem tem cor sao as ambulancias e os chamados */
+  .leaflet-tile-pane{filter:grayscale(1) contrast(.88) brightness(1.06) opacity(.78)}
+  .leaflet-tooltip{background:var(--painel);color:var(--tinta);border:1px solid var(--tinta);border-radius:0;font-size:12px;padding:3px 8px;box-shadow:none}
+  .leaflet-tooltip-top:before{border-top-color:var(--tinta)}
+  .leaflet-popup-content-wrapper{background:var(--painel);color:var(--tinta);border:1px solid var(--tinta);border-radius:0;box-shadow:3px 3px 0 rgba(21,32,42,.18)}
+  .leaflet-popup-tip{background:var(--painel);border:1px solid var(--tinta)}
+  .leaflet-popup-content{margin:10px 14px;font:13px/1.5 var(--sans);min-width:210px}
+  .leaflet-popup-content b{font-family:var(--mono);font-weight:600}
+  .leaflet-popup-content dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0 0}
   .leaflet-popup-content dt{color:var(--apagado)}
   .leaflet-popup-content dd{margin:0}
   .leaflet-container a.leaflet-popup-close-button{color:var(--apagado)}
-  .leaflet-control-attribution{background:rgba(15,25,35,.7)!important;color:var(--apagado)!important;font-size:10px}
+  .leaflet-control-attribution{background:rgba(250,249,246,.85)!important;color:var(--apagado)!important;font-size:10px}
   .leaflet-control-attribution a{color:var(--apagado)!important}
-  .leaflet-bar a{background:var(--painel);color:var(--texto);border-bottom-color:var(--linha)}
-  .leaflet-bar a:hover{background:#22303E}
+  .leaflet-bar{border:1px solid var(--tinta)!important;border-radius:0!important;box-shadow:none!important}
+  .leaflet-bar a{background:var(--painel);color:var(--tinta);border-bottom-color:var(--linha);border-radius:0!important}
+  .leaflet-bar a:hover{background:#EDECE6}
 
   aside{background:var(--painel);display:flex;flex-direction:column;overflow-y:auto;padding:22px 24px 18px}
-  aside.esq{border-right:1px solid var(--linha)}
-  aside.dir{border-left:1px solid var(--linha);padding:22px 0 0}
+  aside.esq{border-right:1px solid var(--tinta)}
+  aside.dir{border-left:1px solid var(--tinta);padding:0}
   aside section+section{border-top:1px solid var(--linha);margin-top:18px;padding-top:16px}
-  h1{font-size:15px;font-weight:600;margin:0}
-  .sub{color:var(--apagado);font-size:12.5px;margin-top:2px}
-  .vivo{display:inline-flex;align-items:center;gap:6px;color:var(--apagado);font-size:12px;white-space:nowrap}
-  .vivo i{width:8px;height:8px;border-radius:50%;background:var(--disp);animation:pulso 2s infinite}
-  .vivo.off i{background:var(--cam);animation:none}
-  @keyframes pulso{0%{box-shadow:0 0 0 0 rgba(61,220,151,.55)}70%{box-shadow:0 0 0 7px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
-  @media (prefers-reduced-motion:reduce){.vivo i{animation:none}}
+  h1{font-family:var(--cond);font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0;line-height:1}
+  .sub{color:var(--apagado);font-size:12.5px;margin-top:5px}
+  .vivo{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--samu);white-space:nowrap;padding-top:2px}
+  .vivo i{width:7px;height:7px;background:var(--samu)}
+  .vivo.off{color:var(--apagado)}
+  .vivo.off i{background:none;border:1.5px solid var(--apagado)}
 
-  .relogio{margin-top:14px;display:flex;align-items:baseline;gap:12px}
-  .relogio .hora{font-size:52px;font-weight:500;line-height:1;letter-spacing:-.02em}
-  .relogio .info{color:var(--apagado);font-size:12.5px;line-height:1.35}
-  .relogio .info b{color:var(--texto);font-weight:500}
+  .relogio{margin-top:16px;display:flex;align-items:flex-end;gap:14px}
+  .relogio .hora{font-family:var(--cond);font-size:64px;font-weight:600;line-height:.85;letter-spacing:-.03em}
+  .relogio .info{color:var(--apagado);font-size:12.5px;line-height:1.35;padding-bottom:2px}
+  .relogio .info b{color:var(--tinta);font-weight:500}
 
-  .titulo{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-  .titulo h2{font-size:13px;font-weight:600;margin:0}
-  .titulo span{color:var(--apagado);font-size:12px}
-  .kpis{display:flex;gap:22px;margin-bottom:12px}
-  .kpi .v{font-size:26px;font-weight:500;line-height:1.1}
-  .kpi .l{color:var(--apagado);font-size:12px}
-  .kpi.alerta .v{color:var(--cam)}
-  .zonas{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
-  .zonas .nome{color:var(--apagado)}
-  .zonas .barra{position:relative;height:7px;background:#22303E;border-radius:2px}
-  .zonas .barra i{position:absolute;left:0;top:0;bottom:0;background:var(--ret);border-radius:2px;transition:width .5s}
-  .zonas .barra i.acima{background:var(--cam)}
-  .zonas .barra s{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--meta)}
-  .zonas .val{text-align:right;min-width:52px}
-  .legenda-meta{color:var(--apagado);font-size:11.5px;margin-top:8px}
-  .legenda-meta s{display:inline-block;width:2px;height:10px;background:var(--meta);vertical-align:-1px;margin:0 5px 0 2px;text-decoration:none}
+  /* transito: fator da hora simulada sobre o tempo de via livre */
+  .transito{margin-top:14px}
+  .tr-cab{display:flex;align-items:baseline;gap:8px;font-size:12.5px}
+  .tr-l{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta2)}
+  .tr-cab b{font-family:var(--mono);font-size:13px;font-weight:600}
+  .tr-cab b.pico{color:var(--samu)}
+  .tr-cab span:last-child{color:var(--apagado)}
+  .tr-curva{display:flex;align-items:flex-end;gap:1px;height:22px;margin-top:6px;border-bottom:1px solid var(--tinta)}
+  .tr-curva i{flex:1;background:var(--linha-forte)}
+  .tr-curva i.agora{background:var(--samu)}
+  .titulo{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:10px}
+  .titulo h2{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta2);margin:0}
+  .titulo span{color:var(--apagado);font-size:12px;text-align:right}
+  .kpis{display:flex;gap:24px;margin-bottom:14px}
+  .kpi .v{font-family:var(--cond);font-size:30px;font-weight:600;line-height:1;white-space:nowrap}
+  .kpi .v small,.fila .v small{font-family:var(--sans);font-size:12px;font-weight:500;color:var(--apagado);margin-left:3px}
+  .kpi .l{color:var(--apagado);font-size:12px;margin-top:3px}
+  .kpi.alerta .v{color:var(--samu)}
+  .kpi .v.verm{color:var(--verm)}
+  .zonas{display:grid;grid-template-columns:auto 1fr auto;gap:7px 10px;align-items:center;font-size:12.5px}
+  .zonas .nome{color:var(--tinta2)}
+  .zonas .barra{position:relative;height:6px;background:#E6E5DF}
+  .zonas .barra i{position:absolute;left:0;top:0;bottom:0;background:var(--tinta);transition:width .5s}
+  .zonas .barra i.acima{background:var(--samu)}
+  .zonas .barra s{position:absolute;top:-4px;bottom:-4px;width:1.5px;background:var(--tinta)}
+  .zonas .val{text-align:right;min-width:52px;font-family:var(--mono);font-size:12px}
+  .legenda-meta{color:var(--apagado);font-size:11.5px;margin-top:9px}
+  .legenda-meta s{display:inline-block;width:1.5px;height:11px;background:var(--tinta);vertical-align:-1px;margin:0 6px 0 2px;text-decoration:none}
 
-  .frota{height:10px;display:flex;border-radius:3px;overflow:hidden;background:#22303E}
+  .frota{height:12px;display:flex;background:#E6E5DF;border:1px solid var(--tinta)}
   .frota i{display:block;height:100%;transition:width .5s}
-  .frota-leg{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin-top:10px;font-size:12.5px}
+  .frota-leg{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;margin-top:11px;font-size:12.5px}
   .frota-leg div{display:flex;justify-content:space-between}
-  .frota-leg em{font-style:normal;display:inline-flex;align-items:center;gap:7px;color:var(--apagado)}
-  .frota-leg em:before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
+  .frota-leg div span{font-family:var(--mono);font-size:12px}
+  .frota-leg em{font-style:normal;display:inline-flex;align-items:center;gap:8px;color:var(--tinta2)}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;background:var(--f);border:1.5px solid var(--b,var(--tinta))}
   .fila{display:flex;gap:22px}
-  .fila .v{font-size:22px;font-weight:500;line-height:1.1}
-  .fila .l{color:var(--apagado);font-size:12px}
+  .fila .v{font-family:var(--cond);font-size:26px;font-weight:600;line-height:1}
+  .fila .l{color:var(--apagado);font-size:12px;margin-top:3px}
 
+  button{font:inherit}
   .controles{display:flex;flex-direction:column;gap:10px}
-  .vel{display:flex;gap:4px}
-  .vel button{flex:1;padding:7px 0;border:1px solid var(--linha);background:transparent;color:var(--apagado);border-radius:4px;font:inherit;font-size:12.5px;cursor:pointer}
-  .vel button:hover{color:var(--texto);border-color:#3A4B5C}
-  .vel button[aria-pressed="true"]{background:#24405A;color:var(--texto);border-color:#2E5478}
-  .vel button:focus-visible,#pausa:focus-visible{outline:2px solid var(--ret);outline-offset:2px}
-  #pausa{padding:9px 0;border:1px solid var(--linha);background:transparent;color:var(--texto);border-radius:4px;font:inherit;font-weight:500;cursor:pointer}
-  #pausa:hover{background:#22303E}
-  #pausa.pausado{border-color:var(--res);color:var(--res)}
-  .turnos-j{display:flex;align-items:flex-end;gap:3px;height:54px;margin:4px 0 8px}
-  .turnos-j i{flex:1;background:#33445A;border-radius:2px 2px 0 0;position:relative;min-width:6px}
-  .turnos-j i.ok{background:var(--disp)}
-  .turnos-j i.base{background:var(--ret)}
-  .turnos-j i:hover:after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--painel);border:1px solid var(--linha);border-radius:4px;padding:3px 6px;font-size:11px;white-space:nowrap;margin-bottom:4px;z-index:5}
-  .turnos-txt{font-size:12px;color:var(--apagado);line-height:1.4}
-  .turnos-txt b{color:var(--texto);font-weight:500}
+  .vel{display:flex;border:1px solid var(--tinta)}
+  .vel button{flex:1;padding:7px 0;border:0;border-left:1px solid var(--linha-forte);background:transparent;color:var(--tinta2);font-family:var(--mono);font-size:12px;cursor:pointer}
+  .vel button:first-child{border-left:0}
+  .vel button:hover{background:#EDECE6;color:var(--tinta)}
+  .vel button[aria-pressed="true"]{background:var(--tinta);color:var(--painel)}
+  button:focus-visible,.cen-lista li:focus-visible{outline:2px solid var(--samu);outline-offset:2px}
+  #pausa{padding:9px 0;border:1px solid var(--tinta);background:transparent;color:var(--tinta);font-weight:500;cursor:pointer}
+  #pausa:hover{background:#EDECE6}
+  #pausa.pausado{background:var(--samu);border-color:var(--samu);color:#fff}
+  .turnos-j{display:flex;align-items:flex-end;gap:3px;height:54px;margin:4px 0 8px;border-bottom:1px solid var(--tinta)}
+  .turnos-j i{flex:1;background:var(--linha-forte);position:relative;min-width:6px}
+  .turnos-j i.ok{background:var(--tinta)}
+  .turnos-j i.base{background:var(--samu)}
+  .turnos-j i:hover:after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--painel);border:1px solid var(--tinta);padding:3px 6px;font-size:11px;white-space:nowrap;margin-bottom:4px;z-index:5}
+  .turnos-txt{font-size:12px;color:var(--apagado);line-height:1.45}
+  .turnos-txt b{color:var(--tinta);font-weight:500}
   .turnos-txt ul{margin:4px 0 0;padding-left:16px}
   /* cenarios "e se...?" */
   .cen-form{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:12.5px}
   .cen-form label{display:flex;flex-direction:column;gap:3px;color:var(--apagado)}
-  .cen-form label.linha{grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;color:var(--texto)}
-  .cen-form input,.cen-form select{background:#0F1923;color:var(--texto);border:1px solid var(--linha);border-radius:4px;padding:6px 8px;font:inherit;font-size:12.5px}
-  .cen-form input[type=checkbox]{width:14px;height:14px;padding:0;accent-color:var(--ret)}
-  .cen-form button{grid-column:1/-1;padding:9px 0;border:1px solid var(--linha);background:transparent;color:var(--texto);border-radius:4px;font:inherit;font-weight:500;cursor:pointer}
-  .cen-form button:hover{background:#22303E}
-  .cen-form button:focus-visible,.cen-lista li:focus-visible{outline:2px solid var(--ret);outline-offset:2px}
+  .cen-form label.linha{grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;color:var(--tinta)}
+  .cen-form input,.cen-form select{background:#fff;color:var(--tinta);border:1px solid var(--linha-forte);border-radius:0;padding:6px 8px;font:inherit;font-size:12.5px}
+  .cen-form input:focus,.cen-form select:focus{outline:none;border-color:var(--tinta)}
+  .cen-form input[type=checkbox]{width:14px;height:14px;padding:0;accent-color:var(--tinta)}
+  .cen-form button{grid-column:1/-1;padding:9px 0;border:1px solid var(--tinta);background:var(--tinta);color:var(--painel);font-weight:500;cursor:pointer}
+  .cen-form button:hover{background:#26323D}
   .cen-lista{list-style:none;margin:12px 0 0;padding:0;font-size:12.5px}
-  .cen-lista li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 8px;border:1px solid transparent;border-radius:4px;cursor:pointer}
-  .cen-lista li:hover{background:#1A2633}
-  .cen-lista li[aria-selected="true"]{border-color:#2E5478;background:#1A2A3A}
+  .cen-lista li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 8px;border-top:1px solid var(--linha);cursor:pointer}
+  .cen-lista li:hover{background:#F2F1EC}
+  .cen-lista li[aria-selected="true"]{background:#fff;box-shadow:inset 3px 0 var(--samu)}
   .cen-lista .n{font-weight:500}
   .cen-lista .s{color:var(--apagado);font-size:11.5px;grid-column:1/-1}
-  .cen-lista .p{text-align:right;font-variant-numeric:tabular-nums}
-  .cen-lista .p small{color:var(--apagado);font-size:11px}
-  .cen-comp{margin-top:10px;font-size:12.5px;line-height:1.5;color:var(--apagado)}
-  .cen-comp b{color:var(--texto);font-weight:500}
-  .cen-comp .sig{color:var(--disp)}
+  .cen-lista .p{text-align:right;font-family:var(--mono);font-size:12px}
+  .cen-lista .p small{color:var(--apagado);font-size:11px;font-family:var(--sans)}
+  .cen-comp{margin-top:10px;font-size:12.5px;line-height:1.55;color:var(--apagado)}
+  .cen-comp b{color:var(--tinta);font-weight:500}
+  .cen-comp .sig{color:var(--bom)}
   .cen-aviso{color:var(--apagado);font-size:12px;margin-top:8px}
   .exp-lista{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px}
-  .exp-lista li{display:flex;justify-content:space-between;gap:10px;padding:4px 0}
+  .exp-lista li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--linha)}
+  .exp-lista li:first-child{border-top:0}
   .exp-lista li b{font-weight:500}
-  .exp-lista .d{font-variant-numeric:tabular-nums;color:var(--disp)}
+  .exp-lista .d{font-family:var(--mono);font-size:12px;color:var(--bom)}
   .exp-lista .d.ns{color:var(--apagado)}
-  .exp-lista .ctrl{color:var(--apagado);border-top:1px dashed var(--linha);margin-top:4px;padding-top:6px}
-  .exp-tog{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--apagado);cursor:pointer}
-  .exp-tog input{accent-color:var(--disp)}
-  .rodape{margin-top:auto;padding-top:14px;color:var(--apagado);font-size:11.5px}
-  .rodape span{color:var(--texto)}
+  .exp-lista .ctrl{color:var(--apagado);border-top:1px dashed var(--linha-forte)!important;margin-top:2px}
+  .exp-tog{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--tinta2);cursor:pointer}
+  .exp-tog input{accent-color:var(--tinta)}
+  .rodape{margin-top:auto;padding-top:16px;color:var(--apagado);font-family:var(--mono);font-size:11px}
+  .rodape span{color:var(--tinta)}
 
-  /* feed de eventos */
-  .feed-cab{padding:0 20px 12px;border-bottom:1px solid var(--linha)}
-  .feed-cab p{color:var(--apagado);font-size:12px;margin:4px 0 0}
-  #feed{list-style:none;margin:0;padding:6px 0;overflow-y:auto;flex:1}
-  #feed li{display:grid;grid-template-columns:44px 12px 1fr;gap:0 8px;padding:6px 20px;font-size:12.5px;line-height:1.35;align-items:start}
-  #feed li:first-child{animation:entra .35s ease-out}
-  @keyframes entra{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){#feed li:first-child{animation:none}}
-  #feed .t{color:var(--apagado)}
-  #feed .p{width:8px;height:8px;border-radius:50%;margin-top:5px;background:var(--c)}
-  #feed .p.sist{border-radius:1px;transform:rotate(45deg)}
-  #feed .m b{font-weight:500}
+  /* livro de ocorrencias */
+  .feed-cab{padding:22px 20px 12px;border-bottom:1px solid var(--tinta)}
+  .feed-cab h1{font-size:20px}
+  .feed-cab p{color:var(--apagado);font-size:12px;margin:6px 0 0}
+  #feed{list-style:none;margin:0;padding:0;overflow-y:auto;flex:1;
+    background:repeating-linear-gradient(var(--painel) 0 31px,var(--linha) 31px 32px)}
+  #feed li{display:grid;grid-template-columns:40px 10px 1fr;gap:0 9px;padding:7px 20px 7px 16px;font-size:12.5px;line-height:1.4;align-items:start;border-bottom:1px solid var(--linha);background:var(--painel)}
+  #feed .t{color:var(--apagado);font-family:var(--mono);font-size:11.5px;padding-top:1px}
+  #feed .p{width:8px;height:8px;margin-top:5px;background:var(--c)}
+  #feed .m b{font-family:var(--mono);font-weight:500;font-size:12px}
   #feed .m small{color:var(--apagado)}
-  #feed li.sist .m{color:#FFD5D6}
+  /* eventos do sistema distribuido: o que a demo quer mostrar */
+  #feed li.sist{background:#fff;box-shadow:inset 3px 0 var(--tinta)}
+  #feed li.sist .p{background:none;border:1.5px solid var(--tinta);transform:rotate(45deg);width:7px;height:7px}
+  #feed li.sist .m:before{content:"sistema";display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--painel);background:var(--tinta);padding:0 4px;margin-right:6px;vertical-align:1px}
 
-  .legenda-mapa{position:absolute;left:12px;bottom:26px;z-index:900;background:rgba(24,36,48,.92);border:1px solid var(--linha);border-radius:6px;padding:8px 12px;font-size:12px;display:grid;gap:4px}
-  .legenda-mapa div{display:flex;align-items:center;gap:8px;color:var(--apagado)}
-  .legenda-mapa i{width:10px;height:10px;border-radius:50%;background:var(--c)}
-  .legenda-mapa i.base{border-radius:1px;background:#4A5A6A}
-  .legenda-mapa i.hosp{border-radius:2px;background:#4A5A6A;position:relative}
-  .legenda-mapa i.hosp:after{content:"+";position:absolute;inset:0;color:#E8EEF4;font:700 10px/10px sans-serif;text-align:center}
-  .ico-hosp{width:16px;height:16px;border-radius:3px;background:#3B4B5C;border:1px solid #5A6C7E;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.6)}
-  .ico-hosp i{position:absolute;background:#E8EEF4;left:50%;top:50%;transform:translate(-50%,-50%)}
-  .ico-hosp i:first-child{width:8px;height:2px}.ico-hosp i:last-child{width:2px;height:8px}
-  .ico-upa{width:10px;height:10px;border-radius:2px;background:#3B4B5C;border:1px solid #5A6C7E;box-shadow:0 1px 3px rgba(0,0,0,.6)}
-  .leaflet-marker-icon.vazia .ico-hosp,.leaflet-marker-icon.vazia .ico-upa{border-color:#FF5A5F;box-shadow:0 0 0 2px rgba(255,90,95,.35)}
-  .legenda-mapa i.cham{border-radius:0;background:none;color:var(--cham);font-style:normal;font-weight:600;line-height:10px;text-align:center}
-  .legenda-mapa i.rota{border-radius:0;height:0;border-top:2px dashed var(--cam);background:none;width:14px}
+  .legenda-mapa{position:absolute;left:12px;bottom:26px;z-index:900;background:var(--painel);border:1px solid var(--tinta);font-size:12px;max-width:330px}
+  .legenda-mapa summary{cursor:pointer;list-style:none;padding:6px 12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta2)}
+  .legenda-mapa summary::-webkit-details-marker{display:none}
+  .legenda-mapa summary:after{content:"+";float:right;margin-left:12px}
+  .legenda-mapa[open] summary{border-bottom:1px solid var(--linha)}
+  .legenda-mapa[open] summary:after{content:"−"}
+  .legenda-mapa .corpo{display:grid;gap:5px;padding:8px 12px 10px}
+  .legenda-mapa .est{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px}
+  .legenda-mapa div{display:flex;align-items:center;gap:8px;color:var(--tinta2)}
+  .legenda-mapa hr{border:0;border-top:1px solid var(--linha);margin:2px 0}
+  .legenda-mapa i{flex:none}
+  .legenda-mapa i.hosp{width:12px;height:12px;background:var(--tinta);position:relative}
+  .legenda-mapa i.hosp:after{content:"";position:absolute;left:5px;top:2px;width:2px;height:8px;background:var(--painel)}
+  .legenda-mapa i.hosp:before{content:"";position:absolute;left:2px;top:5px;width:8px;height:2px;background:var(--painel)}
+  .legenda-mapa i.upa{width:8px;height:8px;margin:0 2px;background:var(--painel);border:1.5px solid var(--tinta)}
+  .legenda-mapa i.cham{font-style:normal;font-weight:700;width:12px;text-align:center;line-height:10px}
+  .legenda-mapa i.rota{width:14px;height:0;border-top:2px dashed var(--samu)}
+  .ico-hosp{width:15px;height:15px;background:var(--tinta);position:relative}
+  .ico-hosp i{position:absolute;background:var(--painel);left:50%;top:50%;transform:translate(-50%,-50%)}
+  .ico-hosp i:first-child{width:9px;height:2px}.ico-hosp i:last-child{width:2px;height:9px}
+  .ico-upa{width:9px;height:9px;background:var(--painel);border:1.5px solid var(--tinta)}
+  .leaflet-marker-icon.vazia .ico-hosp{background:var(--samu)}
+  .leaflet-marker-icon.vazia .ico-upa{border-color:var(--samu);background:var(--samu-claro)}
   .mapa-wrap{position:relative;min-height:0}
 
   /* modo seguir */
-  #seguir{position:absolute;top:12px;right:12px;z-index:950;width:300px;background:rgba(24,36,48,.96);border:1px solid var(--linha);
-    border-radius:8px;padding:14px 16px 12px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
-  #seguir.vazio{width:auto;padding:0}
+  #seguir{position:absolute;top:12px;right:12px;z-index:950;width:304px;background:var(--painel);border:1px solid var(--tinta);
+    padding:14px 16px 12px;box-shadow:4px 4px 0 rgba(21,32,42,.14)}
+  #seguir.vazio{width:auto;padding:0;border:0;box-shadow:none;background:none}
   #seguir .cab{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-  #seguir h3{margin:0;font-size:14px;font-weight:600}
-  #seguir .onde{color:var(--apagado);font-size:12px}
-  #seguir .fechar{background:none;border:0;color:var(--apagado);font:inherit;font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
-  #seguir .fechar:hover{color:var(--texto)}
+  #seguir h3{margin:0;font-family:var(--mono);font-size:13px;font-weight:600}
+  #seguir .onde{color:var(--apagado);font-size:12px;margin-top:2px}
+  #seguir .fechar{background:none;border:0;color:var(--apagado);font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+  #seguir .fechar:hover{color:var(--tinta)}
   .etapas{list-style:none;margin:12px 0 0;padding:0}
   .etapas li{position:relative;padding:0 0 12px 22px;font-size:12.5px;color:var(--apagado)}
-  .etapas li:before{content:"";position:absolute;left:5px;top:5px;width:8px;height:8px;border-radius:50%;background:#33445A;border:2px solid #33445A}
-  .etapas li:not(:last-child):after{content:"";position:absolute;left:8px;top:15px;bottom:-2px;width:2px;background:#33445A}
-  .etapas li.feita{color:var(--texto)}
-  .etapas li.feita:before{background:var(--disp);border-color:var(--disp)}
-  .etapas li.feita:after{background:var(--disp)}
-  .etapas li.atual{color:var(--texto)}
-  .etapas li.atual:before{background:var(--painel);border-color:var(--cam);animation:pulso2 1.6s infinite}
-  @keyframes pulso2{50%{box-shadow:0 0 0 4px rgba(255,90,95,.25)}}
-  @media (prefers-reduced-motion:reduce){.etapas li.atual:before{animation:none}}
-  .etapas .q{float:right;color:var(--apagado);font-size:11.5px}
+  .etapas li:before{content:"";position:absolute;left:4px;top:5px;width:9px;height:9px;background:var(--painel);border:1.5px solid var(--linha-forte)}
+  .etapas li:not(:last-child):after{content:"";position:absolute;left:9px;top:16px;bottom:-1px;width:1px;background:var(--linha-forte)}
+  .etapas li.feita{color:var(--tinta)}
+  .etapas li.feita:before{background:var(--tinta);border-color:var(--tinta)}
+  .etapas li.feita:after{background:var(--tinta)}
+  .etapas li.atual{color:var(--tinta)}
+  .etapas li.atual:before{background:var(--samu);border-color:var(--samu)}
+  .etapas .q{float:right;color:var(--apagado);font-family:var(--mono);font-size:11px}
   .etapas small{display:block;color:var(--apagado)}
-  .etapas .prog{height:5px;background:#22303E;border-radius:2px;margin:6px 0 2px;overflow:hidden}
-  .etapas .prog i{display:block;height:100%;background:var(--cam);transition:width .3s}
+  .etapas .prog{height:4px;background:#E6E5DF;margin:6px 0 2px;overflow:hidden}
+  .etapas .prog i{display:block;height:100%;background:var(--samu);transition:width .3s}
   .seg-acoes{display:flex;gap:6px;margin-top:6px}
-  .seg-acoes button,#seguirProx{flex:1;padding:7px 8px;border:1px solid var(--linha);background:transparent;color:var(--texto);border-radius:4px;font:inherit;font-size:12.5px;cursor:pointer}
-  .seg-acoes button:hover,#seguirProx:hover{background:#22303E}
-  .seg-acoes button[aria-pressed="true"]{background:#24405A;border-color:#2E5478}
-  #seguirProx{padding:9px 14px;background:rgba(24,36,48,.96);box-shadow:0 8px 30px rgba(0,0,0,.45)}
-  #seguirProx.esperando{border-color:var(--cham);color:var(--cham)}
+  .seg-acoes button,#seguirProx{flex:1;padding:7px 8px;border:1px solid var(--tinta);background:var(--painel);color:var(--tinta);font-size:12.5px;cursor:pointer}
+  .seg-acoes button:hover,#seguirProx:hover{background:#EDECE6}
+  .seg-acoes button[aria-pressed="true"]{background:var(--tinta);color:var(--painel)}
+  #seguirProx{padding:9px 14px;box-shadow:3px 3px 0 rgba(21,32,42,.14)}
+  #seguirProx.esperando{border-color:var(--samu);color:var(--samu)}
   #feed li.clic{cursor:pointer}
-  #feed li.clic:hover{background:#1E2C3A}
-  #feed li.seguido{background:#20334A}
+  #feed li.clic:hover{background:#F2F1EC}
+  #feed li.seguido{background:var(--samu-claro)}
 
+  /* abas da coluna direita */
+  .abas{display:flex;border-bottom:1px solid var(--tinta)}
+  .abas button{flex:1;padding:12px 0 10px;border:0;border-right:1px solid var(--linha);background:var(--painel);color:var(--apagado);
+    font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer}
+  .abas button:last-child{border-right:0}
+  .abas button[aria-selected="true"]{background:var(--tinta);color:var(--painel)}
+  .abas .luz{display:inline-block;width:7px;height:7px;margin-left:7px;vertical-align:1px;background:var(--bom)}
+  .abas .luz.ruim{background:var(--samu)}
+  .painel-aba{display:flex;flex-direction:column;flex:1;min-height:0}
+  .painel-aba[hidden]{display:none!important}
+
+  /* laboratorio */
+  #painelLab{overflow-y:auto;padding:16px 18px 24px;gap:0}
+  .lab-sec{padding:14px 0;border-top:1px solid var(--linha)}
+  .lab-sec:first-child{border-top:0;padding-top:0}
+  .lab-sec h3{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta2);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .lab-sec h3 span{font-family:var(--sans);letter-spacing:0;text-transform:none;color:var(--apagado);font-size:11.5px}
+  .inv{display:grid;gap:5px}
+  .inv div{display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;font-size:12.5px}
+  .inv b{font-family:var(--mono);font-size:11px;font-weight:600;text-align:center;padding:2px 0;background:var(--bom);color:#fff}
+  .inv .ruim b{background:var(--samu)}
+  .inv .espera b{background:var(--linha-forte)}
+  .inv small{color:var(--apagado);font-size:11px;text-align:right}
+  .lab-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .chave{position:relative;width:46px;height:24px;border:1px solid var(--tinta);background:var(--painel);cursor:pointer;padding:0;flex:none}
+  .chave:after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;background:var(--tinta);transition:left .15s}
+  .chave[aria-checked="true"]{background:var(--samu);border-color:var(--samu)}
+  .chave[aria-checked="true"]:after{left:24px;background:#fff}
+  .taxas{display:grid;grid-template-columns:auto 1fr 38px;gap:6px 10px;align-items:center;font-size:12.5px}
+  .taxas label{color:var(--tinta2)}
+  .taxas input[type=range]{width:100%;accent-color:var(--samu)}
+  .taxas output{font-family:var(--mono);font-size:11.5px;text-align:right}
+  .presets{display:flex;gap:6px;margin-top:10px}
+  .lab-btn{padding:6px 10px;border:1px solid var(--tinta);background:var(--painel);color:var(--tinta);font-size:12px;cursor:pointer}
+  .lab-btn:hover{background:#EDECE6}
+  .lab-btn.forte{background:var(--tinta);color:var(--painel)}
+  .lab-btn.forte:hover{background:#26323D}
+  .lab-btn.alerta{border-color:var(--samu);color:var(--samu)}
+  .lab-btn:disabled{opacity:.45;cursor:default}
+  .procs{display:grid;gap:8px}
+  .proc{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:8px 10px;border:1px solid var(--linha-forte);background:#fff}
+  .proc .nome{font-family:var(--mono);font-size:12px;font-weight:600}
+  .proc .nome em{font-style:normal;font-weight:500;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;margin-left:6px;background:var(--bom);color:#fff}
+  .proc .nome em.caido{background:var(--samu)}
+  .proc .nome em.pausado{background:var(--amar)}
+  .proc .info{color:var(--apagado);font-size:11.5px;text-align:right}
+  .proc .acoes{grid-column:1/-1;display:flex;gap:6px}
+  .proc .acoes .lab-btn{flex:1;padding:5px 0}
+  .desp{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px}
+  .desp b{font-family:var(--cond);font-size:24px;font-weight:600;min-width:20px;text-align:center}
+  .desp .lab-btn{width:32px;padding:4px 0;font-family:var(--mono)}
+  .oc-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px}
+  .oc-form label{display:flex;flex-direction:column;gap:3px;color:var(--apagado)}
+  .oc-form input,.oc-form select{background:#fff;border:1px solid var(--linha-forte);padding:5px 7px;font:inherit;font-size:12.5px;color:var(--tinta)}
+  .oc-form .lab-btn{grid-column:1/-1;padding:8px 0}
+  .oc-form .lab-btn.marcando{background:var(--samu);border-color:var(--samu);color:#fff}
+  .oc-lista{list-style:none;margin:10px 0 0;padding:0;font-size:12px}
+  .oc-lista li{padding:6px 0;border-top:1px solid var(--linha)}
+  .oc-lista .l1{display:flex;justify-content:space-between;gap:8px}
+  .oc-lista .l1 b{font-family:var(--mono);font-weight:600}
+  .oc-lista .barra{display:flex;height:6px;margin-top:5px;background:#E6E5DF}
+  .oc-lista .barra i{display:block;height:100%}
+  .pares{display:grid;gap:0}
+  .par{display:grid;grid-template-columns:1fr 14px 1fr;gap:6px;align-items:start;padding:7px 0;border-top:1px solid var(--linha);font-size:12px}
+  .par:first-child{border-top:0}
+  .par b{font-weight:500;display:block}
+  .par .n{font-family:var(--mono);font-size:11px;color:var(--samu)}
+  .par .n.rec{color:var(--bom)}
+  .par .n.zero{color:var(--linha-forte)}
+  .par .seta{color:var(--apagado);text-align:center;padding-top:1px}
+  .par small{display:block;color:var(--apagado);font-size:10.5px;font-family:var(--mono);margin-top:2px;word-break:break-word}
+  .veredito{margin-top:10px;padding:10px 12px;border:1px solid var(--linha-forte);background:#fff;font-size:12.5px;line-height:1.5}
+  .veredito.ok{border-color:var(--bom);box-shadow:inset 3px 0 var(--bom)}
+  .veredito.ruim{border-color:var(--samu);box-shadow:inset 3px 0 var(--samu)}
+  .veredito b{font-family:var(--cond);font-size:18px;font-weight:600;display:block}
+  .veredito ul{margin:6px 0 0;padding-left:16px;font-family:var(--mono);font-size:11px}
+  .mapa-marcando,.mapa-marcando .leaflet-interactive{cursor:crosshair!important}
+  .aviso-marcar{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:960;background:var(--samu);color:#fff;padding:7px 14px;font-size:12.5px;font-weight:500}
+  .ico-oc{width:34px;height:34px;border:2.5px solid var(--samu);border-radius:50%;background:rgba(217,67,31,.1);display:grid;place-items:center;
+    font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--samu)}
+  #feed li.falha{background:#FBEDE8;box-shadow:inset 3px 0 var(--samu)}
+  #feed li.falha .p{background:var(--samu)}
+  #feed li.falha .m:before{content:"falha";display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--samu);padding:0 4px;margin-right:6px;vertical-align:1px}
   @media (max-width:1100px){#app{grid-template-columns:var(--lateral) 1fr}aside.dir{display:none}}
   @media (max-width:820px){
     #seguir{left:12px;right:12px;width:auto;top:56px}
     #app{grid-template-columns:1fr;grid-template-rows:1fr auto}
-    aside.esq{border-right:0;border-top:1px solid var(--linha);max-height:46vh;order:2;padding:16px}
-    .relogio .hora{font-size:38px}.legenda-mapa{display:none}
+    aside.esq{border-right:0;border-top:1px solid var(--tinta);max-height:46vh;order:2;padding:16px}
+    .relogio .hora{font-size:44px}.legenda-mapa{display:none}
   }
 </style>
 </head>
@@ -208,12 +324,16 @@
   <aside class="esq">
     <section>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div><h1>samu-sim</h1><div class="sub">Despacho de ambulâncias · Rio de Janeiro</div></div>
+        <div><h1>samu-sim</h1><div class="sub">Simulação do despacho do SAMU · Rio de Janeiro</div></div>
         <div class="vivo" id="vivo"><i></i><span>ao vivo</span></div>
       </div>
       <div class="relogio">
         <div class="hora" id="hora">--:--</div>
         <div class="info">hora simulada<br><b id="fatorTxt">–</b><br><span id="politica">–</span></div>
+      </div>
+      <div class="transito" id="transito" hidden>
+        <div class="tr-cab"><span class="tr-l">trânsito</span><b id="trFator">–</b><span id="trNome"></span></div>
+        <div class="tr-curva" id="trCurva" aria-hidden="true"></div>
       </div>
     </section>
     <section>
@@ -221,7 +341,7 @@
       <div class="kpis">
         <div class="kpi"><div class="v" id="p50">–</div><div class="l">mediana (P50)</div></div>
         <div class="kpi" id="kpiP90"><div class="v" id="p90">–</div><div class="l">P90</div></div>
-        <div class="kpi" id="kpiVerm"><div class="v" id="p90v" style="color:var(--cam)">–</div><div class="l">P90 vermelhos</div></div>
+        <div class="kpi" id="kpiVerm"><div class="v verm" id="p90v">–</div><div class="l">P90 vermelhos</div></div>
       </div>
       <div class="zonas" id="zonas"></div>
       <div class="legenda-meta"><s></s>meta de 15 min por zona (P90)</div>
@@ -230,12 +350,12 @@
       <div class="titulo"><h2>Frota</h2><span id="nFrota">–</span></div>
       <div class="frota" id="frota"></div>
       <div class="frota-leg">
-        <div><em style="--c:var(--disp)">disponível</em><span id="c-disponivel">0</span></div>
-        <div><em style="--c:var(--cam)">a caminho</em><span id="c-a_caminho">0</span></div>
-        <div><em style="--c:var(--res)">reservada</em><span id="c-reservada">0</span></div>
-        <div><em style="--c:var(--loc)">no local</em><span id="c-no_local">0</span></div>
-        <div><em style="--c:#26C6DA">ao hospital</em><span id="c-transportando">0</span></div>
-        <div><em style="--c:var(--ret)">retornando</em><span id="c-retornando">0</span></div>
+        <div><em><i class="sw" style="--f:var(--painel)"></i>disponível</em><span id="c-disponivel">0</span></div>
+        <div><em><i class="sw" style="--f:var(--samu)"></i>a caminho</em><span id="c-a_caminho">0</span></div>
+        <div><em><i class="sw" style="--f:var(--samu-claro);--b:var(--samu)"></i>reservada</em><span id="c-reservada">0</span></div>
+        <div><em><i class="sw" style="--f:var(--tinta)"></i>no local</em><span id="c-no_local">0</span></div>
+        <div><em><i class="sw" style="--f:var(--tinta);--b:var(--samu)"></i>ao hospital</em><span id="c-transportando">0</span></div>
+        <div><em><i class="sw" style="--f:var(--cinza);--b:var(--tinta2)"></i>retornando</em><span id="c-retornando">0</span></div>
       </div>
     </section>
     <section>
@@ -269,7 +389,7 @@
         <label>política <select name="pol"><option value="menor_eta">menor ETA</option><option value="mais_proxima">mais próxima</option><option value="menor_eta_cobertura">menor ETA + cobertura</option></select></label>
         <label>seeds <select name="seeds"><option value="3">3 (rápido)</option><option value="5" selected>5</option><option value="10">10 (preciso)</option></select></label>
         <label>duração simulada <select name="dur"><option value="21600">6 h</option><option value="43200">12 h</option><option value="86400" selected>24 h</option></select></label>
-        <label class="linha"><input type="checkbox" name="transito"> trânsito por hora</label>
+        <label class="linha"><input type="checkbox" name="transito" checked> trânsito por hora</label>
         <label class="linha"><input type="checkbox" name="repos"> reposicionamento por demanda prevista</label>
         <button type="submit">Simular cenário</button>
       </form>
@@ -283,34 +403,85 @@
   <div class="mapa-wrap">
     <div id="mapa"></div>
     <div id="seguir" class="vazio"><button id="seguirProx">Seguir o próximo chamado</button></div>
-    <div class="legenda-mapa">
+    <details class="legenda-mapa" open>
+      <summary>legenda</summary>
+      <div class="corpo">
       <div><i class="hosp"></i>hospital de emergência (recebe pacientes)</div>
-      <div><i class="base" style="width:8px;height:8px;margin:0 1px"></i>UPA · borda vermelha = sem ambulância livre</div>
-      <div><i class="cham">×</i>chamado (cor = gravidade: <span style="color:#FF5A5F">vermelho</span> <span style="color:#FFC857">amarelo</span> <span style="color:#3DDC97">verde</span>)</div>
+      <div><i class="upa"></i>UPA · laranja = sem ambulância livre</div>
+      <div><i class="cham" style="color:var(--verm)">×</i>chamado · triagem <span style="color:var(--verm)">vermelho</span> <span style="color:var(--amar)">amarelo</span> <span style="color:var(--verde)">verde</span></div>
       <div><i class="rota"></i>deslocamento até o chamado</div>
-      <div><i style="--c:var(--disp)"></i>disponível</div>
-      <div><i style="--c:var(--cam)"></i>a caminho</div>
-      <div><i style="--c:var(--loc)"></i>no local</div>
-      <div><i style="--c:#26C6DA"></i>levando ao hospital</div>
-      <div><i style="--c:var(--ret)"></i>retornando</div>
-    </div>
+      <hr>
+      <div class="est">
+        <div><i class="sw" style="--f:var(--painel)"></i>disponível</div>
+        <div><i class="sw" style="--f:var(--samu)"></i>a caminho</div>
+        <div><i class="sw" style="--f:var(--tinta)"></i>no local</div>
+        <div><i class="sw" style="--f:var(--tinta);--b:var(--samu)"></i>ao hospital</div>
+        <div><i class="sw" style="--f:var(--cinza);--b:var(--tinta2)"></i>retornando</div>
+      </div>
+      </div>
+    </details>
   </div>
 
   <aside class="dir">
-    <div class="feed-cab"><h1>O que está acontecendo</h1><p>eventos de todos os serviços, na hora simulada · clique num chamado para segui-lo</p></div>
-    <ul id="feed"></ul>
+    <div class="abas" id="abas" role="tablist" hidden>
+      <button role="tab" id="abaLivro" aria-selected="true" data-p="painelLivro">Livro</button>
+      <button role="tab" id="abaLab" aria-selected="false" data-p="painelLab">Laboratório<i class="luz" id="luzInv"></i></button>
+    </div>
+    <div class="painel-aba" id="painelLivro">
+      <div class="feed-cab"><h1>Livro de ocorrências</h1><p>eventos de todos os serviços, na hora simulada · clique num chamado para segui-lo</p></div>
+      <ul id="feed"></ul>
+    </div>
+    <div class="painel-aba" id="painelLab" hidden>
+      <section class="lab-sec">
+        <h3>Invariantes <span id="invResumo">verificadas a cada evento</span></h3>
+        <div class="inv" id="inv"></div>
+      </section>
+      <section class="lab-sec">
+        <div class="lab-toggle"><h3 style="margin:0">Falhas na fila</h3><button class="chave" id="caosChave" role="switch" aria-checked="false" aria-label="ligar falhas na fila"></button></div>
+        <div class="taxas" id="taxas"></div>
+        <div class="presets"><button class="lab-btn" data-preset="leve">leve</button><button class="lab-btn" data-preset="moderado">moderado</button><button class="lab-btn" data-preset="pesado">pesado</button></div>
+      </section>
+      <section class="lab-sec">
+        <h3>Processos <span>reaper libera em ~6 s</span></h3>
+        <div class="procs" id="procs"></div>
+        <div class="desp"><button class="lab-btn" id="despMenos" aria-label="remover despachante">−</button><b id="despN">–</b><button class="lab-btn" id="despMais" aria-label="adicionar despachante">+</button><span>despachantes disputando a frota</span></div>
+      </section>
+      <section class="lab-sec">
+        <h3>Ocorrência com várias vítimas</h3>
+        <div class="oc-form">
+          <label for="ocVitimas">vítimas <input type="number" id="ocVitimas" min="2" max="20" value="6"></label>
+          <label for="ocPri">triagem <select id="ocPri"><option value="vermelho">vermelho</option><option value="amarelo">amarelo</option><option value="verde">verde</option></select></label>
+          <button class="lab-btn forte" id="ocMarcar">Marcar o local no mapa</button>
+        </div>
+        <ul class="oc-lista" id="ocLista"></ul>
+      </section>
+      <section class="lab-sec">
+        <h3>Falha → recuperação</h3>
+        <div class="pares" id="pares"></div>
+      </section>
+      <section class="lab-sec">
+        <h3>Prova final</h3>
+        <button class="lab-btn forte" id="btnVerificar" style="width:100%;padding:9px 0">Drenar e verificar</button>
+        <div class="veredito" id="veredito">Desliga as falhas, revive os processos, espera todos os chamados abertos terminarem e julga as 5 invariantes.</div>
+      </section>
+    </div>
   </aside>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const CORES = {disponivel:'#3DDC97', reservada:'#FFC857', a_caminho:'#FF5A5F', no_local:'#B388FF', transportando:'#26C6DA', retornando:'#4FC3F7'};
+// estado da ambulancia = preenchimento (f) e contorno (b); a cor de sinal so marca deslocamento
+const TINTA = '#15202A', SAMU = '#D9431F';
+const ESTILO = {disponivel:{f:'#FAF9F6', b:TINTA}, reservada:{f:'#F4D3C8', b:SAMU}, a_caminho:{f:SAMU, b:TINTA},
+                no_local:{f:TINTA, b:TINTA}, transportando:{f:TINTA, b:SAMU}, retornando:{f:'#A7AEB2', b:'#47535D'}};
 const NOMES = {disponivel:'disponível', reservada:'reservada', a_caminho:'a caminho', no_local:'no local', transportando:'levando ao hospital', retornando:'retornando à base'};
 const ORDEM = ['disponivel','reservada','a_caminho','no_local','transportando','retornando'];
 const FATORES = [1, 5, 20, 50, 200];
 const META_SEG = 15 * 60;
-const PRI = {vermelho:'#FF5A5F', amarelo:'#FFC857', verde:'#3DDC97'};
+const PRI = {vermelho:'#B3261E', amarelo:'#C98F00', verde:'#2E7D4F'};  // triagem
 const ZONAS = ['Centro','Sul','Norte','Barra','Oeste'];
+// espelha samu_sim.core.modelos.ROTULO_ZONA: zona = Area de Planejamento da prefeitura
+const ROTULO_ZONA = {Centro:'Centro (AP1)', Sul:'Sul (AP2.1)', Norte:'Norte (AP2.2 e AP3)', Barra:'Barra e Jacarepaguá (AP4)', Oeste:'Oeste (AP5)'};
 const $ = id => document.getElementById(id);
 
 const mapa = L.map('mapa').setView([-22.95, -43.38], 11);
@@ -323,7 +494,10 @@ const bases = {}, amb = {}, rotas = {}, cham = {};
 
 function tooltipBase(b){ const f = b.frota || {total:0, livres:0}; return `<b>${b.nome}</b><br>${b.tipo === 'hospital' ? 'hospital de emergência' : 'UPA'} · ${f.livres} de ${f.total} ambulâncias livres`; }
 const hhmm = s => { s = Math.max(0, s % 86400); return String(Math.floor(s/3600)).padStart(2,'0') + ':' + String(Math.floor(s%3600/60)).padStart(2,'0'); };
-const minutos = v => v == null ? '–' : (v/60).toFixed(v < 600 ? 1 : 0) + ' min';
+const num = (v, casas) => v.toFixed(casas).replace('.', ',');
+const minutos = v => v == null ? '–' : num(v/60, v < 600 ? 1 : 0) + ' min';
+// numero grande com a unidade pequena na mesma linha (KPIs)
+const minKpi = v => v == null ? '–' : `${num(v/60, v < 600 ? 1 : 0)}<small>min</small>`;
 const agoraSim = () => !ultimo ? 0 : ultimo.pausada ? ultimo.agora_sim : ultimo.agora_sim + (performance.now() - recebidoEm) / 1000 * ultimo.fator;
 const lerp = (a, b, t) => [a[0] + (b[0]-a[0]) * t, a[1] + (b[1]-a[1]) * t];
 
@@ -331,9 +505,11 @@ const lerp = (a, b, t) => [a[0] + (b[0]-a[0]) * t, a[1] + (b[1]-a[1]) * t];
    base -> chamado (a_caminho) e chamado -> base (retornando) pelos tempos previstos */
 function posicao(a, agora){
   const base = bases[a.base_id], fim = a.destino && [a.destino.lat, a.destino.lon];
-  if (a.status === 'a_caminho' && base && fim && a.despachado_em != null && a.chegada_prevista_em > a.despachado_em){
+  if (a.status === 'a_caminho' && fim && a.despachado_em != null && a.chegada_prevista_em > a.despachado_em){
+    // parte de onde a ambulancia estava ao ser despachada (lat/lon gravados), nao da base:
+    // ela pode ter sido redespachada do meio da rua ou de um hospital
     const t = Math.min(1, Math.max(0, (agora - a.despachado_em) / (a.chegada_prevista_em - a.despachado_em)));
-    return lerp([base.lat, base.lon], fim, t);
+    return lerp([a.lat, a.lon], fim, t);
   }
   if (a.status === 'transportando' && fim && a.hospital && a.transporte_em != null && a.hospital_previsto_em > a.transporte_em){
     const t = Math.min(1, Math.max(0, (agora - a.transporte_em) / (a.hospital_previsto_em - a.transporte_em)));
@@ -373,6 +549,7 @@ function aplicarEstado(e){
   $('pausa').classList.toggle('pausado', pausada);
   if (e.rodada){ $('politica').textContent = 'política ' + e.rodada.politica.replaceAll('_',' '); $('rodada').textContent = e.rodada.id; $('roteador').textContent = e.rodada.roteador; }
   for (const b of $('vel').children) b.setAttribute('aria-pressed', String(!pausada && +b.dataset.f === e.fator));
+  mostrarTransito(e.transito, e.agora_sim);
 
   if (!basesDesenhadas){ basesDesenhadas = true;
     for (const b of e.bases){ bases[b.id] = b;
@@ -388,25 +565,26 @@ function aplicarEstado(e){
   const cont = Object.fromEntries(ORDEM.map(s => [s, 0]));
   for (const a of e.ambulancias){
     cont[a.status] = (cont[a.status]||0) + 1;
-    if (!amb[a.id]){ amb[a.id] = L.circleMarker([a.lat,a.lon],{radius:5.5,weight:1.5,color:'#0F1923',fillOpacity:1}).addTo(mapa);
+    if (!amb[a.id]){ amb[a.id] = L.circleMarker([a.lat,a.lon],{radius:5.5,weight:1.5,color:TINTA,fillOpacity:1}).addTo(mapa);
       amb[a.id].bindPopup(() => popupAmb(amb[a.id].dados)); }
     amb[a.id].dados = a;
-    amb[a.id].setStyle({fillColor: CORES[a.status] || '#8A9BAE', radius: a.status === 'disponivel' ? 5 : 6.5});
+    const est = ESTILO[a.status] || ESTILO.retornando;
+    amb[a.id].setStyle({fillColor: est.f, color: est.b, weight: a.status === 'transportando' ? 2.5 : 1.5, radius: a.status === 'disponivel' ? 4.5 : 6.5});
     if (a.status === 'a_caminho' && a.destino){
       const pts = [posicao(a, agoraSim()), [a.destino.lat, a.destino.lon]];
-      if (!rotas[a.id]) rotas[a.id] = L.polyline(pts, {color:'#FF5A5F', weight:1.5, dashArray:'4 5', opacity:.8}).addTo(camadaRotas);
+      if (!rotas[a.id]) rotas[a.id] = L.polyline(pts, {color:SAMU, weight:1.5, dashArray:'4 5', opacity:.9}).addTo(camadaRotas);
       else rotas[a.id].setLatLngs(pts);
     } else if (rotas[a.id]){ camadaRotas.removeLayer(rotas[a.id]); delete rotas[a.id]; }
   }
   const total = e.ambulancias.length;
   $('nFrota').textContent = `${cont.disponivel} de ${total} livres`; $('nAmb').textContent = total;
-  $('frota').innerHTML = ORDEM.map(s => `<i style="width:${100*cont[s]/Math.max(total,1)}%;background:${CORES[s]}"></i>`).join('');
+  $('frota').innerHTML = ORDEM.map(s => `<i style="width:${100*cont[s]/Math.max(total,1)}%;background:${ESTILO[s].f}"></i>`).join('');
   for (const s of ORDEM) $('c-'+s).textContent = cont[s];
 
   const abertos = new Set();
   for (const c of e.chamados_abertos){ abertos.add(c.id);
     if (!cham[c.id]){ const cor = PRI[c.prioridade] || '#FF8A3D';
-      cham[c.id] = L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:`<div style="color:${cor};font:600 20px/14px IBM Plex Sans,sans-serif;text-shadow:0 0 6px rgba(0,0,0,.8)">×</div>`,iconSize:[14,14],iconAnchor:[7,7]})}).addTo(mapa);
+      cham[c.id] = L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:`<div style="color:${cor};font:700 21px/14px IBM Plex Sans,sans-serif;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 4px #fff">×</div>`,iconSize:[14,14],iconAnchor:[7,7]})}).addTo(mapa);
       cham[c.id].on('click', () => seguir(c.id)); }
     cham[c.id].dados = c; cham[c.id].setOpacity(c.ambulancia_id ? .55 : 1); }
   for (const id in cham) if (!abertos.has(id)){ mapa.removeLayer(cham[id]); delete cham[id]; }
@@ -414,13 +592,27 @@ function aplicarEstado(e){
   aplicarDestaque();
 }
 
+/* transito: o fator vem do servidor; a curva mostra o dia e marca a hora simulada */
+function nomeHora(h, f){ if (f <= 1.0) return 'via livre'; if (h < 12) return f >= 1.45 ? 'pico da manhã' : 'manhã';
+  if (h >= 16 && h < 20) return f >= 1.45 ? 'pico da tarde' : 'fim de tarde'; return h >= 20 ? 'noite' : 'meio do dia'; }
+function mostrarTransito(t, agora){
+  const box = $('transito'); if (!t) { box.hidden = true; return; } box.hidden = false;
+  if (!t.ligado) { $('trFator').textContent = 'desligado'; $('trFator').className = ''; $('trNome').textContent = 'tempo de via livre'; $('trCurva').innerHTML = ''; return; }
+  const h = Math.floor((agora % 86400) / 3600);
+  $('trFator').textContent = num(t.fator, 2) + '×'; $('trFator').className = t.fator >= 1.45 ? 'pico' : '';
+  $('trNome').textContent = nomeHora(h, t.fator) + ' · ETA ' + (t.fator > 1 ? '+' + Math.round((t.fator - 1) * 100) + '%' : 'sem acréscimo');
+  const max = Math.max(...t.por_hora);
+  $('trCurva').innerHTML = t.por_hora.map((f, i) => `<i class="${i === h ? 'agora' : ''}" style="height:${Math.max(8, 100 * (f - 0.9) / (max - 0.9))}%" title="${String(i).padStart(2,'0')}h · ${num(f, 2)}×"></i>`).join('');
+}
+
 /* ---------- modo seguir: um chamado vira o protagonista ---------- */
 function aplicarDestaque(){
   const ambId = seguindoDados && seguindoDados.ambulancia && seguindoDados.ambulancia.id;
   for (const id in amb){
     const foco = !seguindo || id === ambId;
+    const est = ESTILO[amb[id].dados.status] || ESTILO.retornando;
     amb[id].setStyle({opacity: foco ? 1 : .25, fillOpacity: foco ? 1 : .25,
-      color: id === ambId ? '#FFFFFF' : '#0F1923', weight: id === ambId ? 2.5 : 1.5});
+      color: id === ambId ? SAMU : est.b, weight: id === ambId ? 3.5 : (amb[id].dados.status === 'transportando' ? 2.5 : 1.5)});
     if (id === ambId) amb[id].bringToFront();
   }
   for (const id in cham) cham[id].setOpacity(!seguindo ? (cham[id].dados.ambulancia_id ? .55 : 1) : id === seguindo ? 1 : .2);
@@ -499,7 +691,7 @@ function renderSeguido(d){
     }
   }
   const box = $('seguir'); box.className = '';
-  box.innerHTML = `<div class="cab"><div><h3>Seguindo ${c.id}</h3><div class="onde">${c.bairro} · Zona ${c.zona}${c.tentativas ? ' · redespachado ' + c.tentativas + '×' : ''}</div></div><button class="fechar" title="parar de seguir" aria-label="parar de seguir">×</button></div>
+  box.innerHTML = `<div class="cab"><div><h3>Seguindo ${c.id}</h3><div class="onde">${c.bairro} · ${ROTULO_ZONA[c.zona] || c.zona}${c.tentativas ? ' · redespachado ' + c.tentativas + '×' : ''}</div></div><button class="fechar" title="parar de seguir" aria-label="parar de seguir">×</button></div>
     <ul class="etapas">${etapas.map(e => `<li class="${e.cls}">${e.t}${e.s ? `<small>${e.s}</small>` : ''}${e.prog != null ? `<div class="prog"><i style="width:${e.prog}%"></i></div>` : ''}</li>`).join('')}</ul>
     <div class="seg-acoes"><button id="btnCam" aria-pressed="${seguirCamera}">Câmera segue</button><button id="btnEnq">Enquadrar</button></div>`;
   box.querySelector('.fechar').onclick = pararDeSeguir;
@@ -523,15 +715,15 @@ setInterval(() => {
 
 async function metricas(){
   const m = await (await fetch('/metricas')).json();
-  $('p50').textContent = minutos(m.resposta.p50); $('p90').textContent = minutos(m.resposta.p90);
+  $('p50').innerHTML = minKpi(m.resposta.p50); $('p90').innerHTML = minKpi(m.resposta.p90);
   $('kpiP90').classList.toggle('alerta', m.resposta.p90 != null && m.resposta.p90 > META_SEG);
   $('nResp').textContent = m.resposta.n ? `${m.resposta.n} chegadas` : 'sem chegadas ainda';
-  const v = (m.por_prioridade || {}).vermelho; $('p90v').textContent = v ? minutos(v.p90) : '–';
+  const v = (m.por_prioridade || {}).vermelho; $('p90v').innerHTML = v ? minKpi(v.p90) : '–';
   $('atend').textContent = m.atendidos; $('pend').textContent = m.fila.pendentes;
-  $('espera').textContent = m.fila.pendentes ? minutos(m.fila.idade_max_seg) : '–';
+  $('espera').innerHTML = m.fila.pendentes ? minKpi(m.fila.idade_max_seg) : '–';
   const escala = Math.max(META_SEG * 2, ...Object.values(m.por_zona).map(z => z.p90 || 0));
   $('zonas').innerHTML = ZONAS.filter(z => m.por_zona[z]).map(z => { const p = m.por_zona[z].p90;
-    return `<div class="nome">${z}</div><div class="barra"><i class="${p > META_SEG ? 'acima' : ''}" style="width:${100*p/escala}%"></i><s style="left:${100*META_SEG/escala}%"></s></div><div class="val">${minutos(p)}</div>`; }).join('')
+    return `<div class="nome">${ROTULO_ZONA[z]}</div><div class="barra"><i class="${p > META_SEG ? 'acima' : ''}" style="width:${100*p/escala}%"></i><s style="left:${100*META_SEG/escala}%"></s></div><div class="val">${minutos(p)}</div>`; }).join('')
     || '<div class="nome" style="grid-column:1/-1">aguardando as primeiras chegadas…</div>';
 }
 
@@ -541,18 +733,35 @@ let ultimoTs = -1;
 function frase(e){
   const z = e.zona ? ` <small>· ${e.zona}</small>` : '';
   switch (e.tipo){
-    case 'chamado_criado':      return {c:PRI[e.prioridade] || 'var(--cham)', m:`novo chamado <b>${e.chamado_id}</b> em ${e.bairro || '?'}${z}${e.prioridade ? ` <small>· ${e.prioridade}${e.tipo_chamado ? ', ' + e.tipo_chamado : ''}</small>` : ''}`};
-    case 'despachada':          return {c:'var(--cam)',  m:`<b>${e.ambulancia_id}</b> despachada para ${e.chamado_id} <small>· chega em ${minutos(e.eta_seg)}</small>`};
-    case 'chegou':              return {c:'var(--loc)',  m:`<b>${e.ambulancia_id}</b> chegou em ${e.chamado_id} <small>· resposta ${minutos(e.resposta_seg)}</small>`};
-    case 'transporte_iniciado': return {c:'#26C6DA',     m:`<b>${e.ambulancia_id}</b> levando paciente de ${e.chamado_id} ao hospital <small>· ${minutos(e.eta_seg)}</small>`};
-    case 'hospital_chegou':     return {c:'#26C6DA',     m:`<b>${e.ambulancia_id}</b> entregou o paciente em ${e.hospital_id}`};
-    case 'liberada':            return {c:'var(--ret)',  m:`<b>${e.ambulancia_id}</b> liberada, voltando à base`};
-    case 'sem_ambulancia':      return {c:'var(--res)',  m:`${e.chamado_id} aguarda: nenhuma ambulância livre`};
-    case 'reserva_falhou':      return {c:'var(--sist)', s:1, m:`corrida perdida: outro despachante levou <b>${e.ambulancia_id}</b> <small>· tentando a próxima</small>`};
-    case 'chamado_ja_despachado': return {c:'var(--sist)', s:1, m:`mensagem duplicada de ${e.chamado_id} ignorada <small>· idempotência</small>`};
-    case 'transicao_rejeitada': return {c:'var(--sist)', s:1, m:`<b>${e.ambulancia_id}</b> rejeitou mensagem antiga <small>· máquina de estados</small>`};
-    case 'reaper_liberou':      return {c:'var(--sist)', s:1, m:`reaper liberou <b>${e.ambulancia_id}</b>: worker ${e.worker_id} sem sinal há ${Math.round(e.idade_seg)} s`};
-    case 'roteador_fallback':   return {c:'var(--sist)', s:1, m:`roteador indisponível, usando linha reta`};
+    case 'chamado_criado':      return {c:PRI[e.prioridade] || 'var(--samu)', m:`novo chamado <b>${e.chamado_id}</b> em ${e.bairro || '?'}${z}${e.prioridade ? ` <small>· ${e.prioridade}${e.tipo_chamado ? ', ' + e.tipo_chamado : ''}</small>` : ''}`};
+    case 'despachada':          return {c:'var(--samu)',  m:`<b>${e.ambulancia_id}</b> despachada para ${e.chamado_id} <small>· chega em ${minutos(e.eta_seg)}</small>`};
+    case 'chegou':              return {c:'var(--tinta)',  m:`<b>${e.ambulancia_id}</b> chegou em ${e.chamado_id} <small>· resposta ${minutos(e.resposta_seg)}</small>`};
+    case 'transporte_iniciado': return {c:'var(--tinta2)',     m:`<b>${e.ambulancia_id}</b> levando paciente de ${e.chamado_id} ao hospital <small>· ${minutos(e.eta_seg)}</small>`};
+    case 'hospital_chegou':     return {c:'var(--tinta2)',     m:`<b>${e.ambulancia_id}</b> entregou o paciente no ${(bases[e.hospital_id] || {}).nome || e.hospital_id}`};
+    case 'liberada':            return {c:'var(--cinza)',  m:`<b>${e.ambulancia_id}</b> liberada, voltando à base`};
+    case 'sem_ambulancia':      return {c:'var(--samu)',  m:`${e.chamado_id} aguarda: nenhuma ambulância livre`};
+    case 'reserva_falhou':      return {c:'var(--tinta)', s:1, m:`corrida perdida: outro despachante levou <b>${e.ambulancia_id}</b> <small>· tentando a próxima</small>`};
+    case 'chamado_ja_despachado': return {c:'var(--tinta)', s:1, m:`mensagem duplicada de ${e.chamado_id} ignorada <small>· idempotência</small>`};
+    case 'transicao_rejeitada': return {c:'var(--tinta)', s:1, m:`<b>${e.ambulancia_id}</b> rejeitou mensagem antiga <small>· máquina de estados</small>`};
+    case 'reaper_liberou':      return {c:'var(--tinta)', s:1, m:`reaper liberou <b>${e.ambulancia_id}</b>: worker ${e.worker_id} sem sinal há ${Math.round(e.idade_seg)} s`};
+    case 'despacho_duplicado_evitado': return {c:'var(--tinta)', s:1, m:`mensagem duplicada em corrida: reserva de <b>${e.ambulancia_id}</b> desfeita <small>· escrita condicional</small>`};
+    case 'chamado_retomado':    return {c:'var(--tinta)', s:1, m:`<b>${e.ambulancia_id}</b> perdeu ${e.chamado_id} para o reaper <small>· ciclo encerrado</small>`};
+    case 'chamado_republicado': return {c:'var(--tinta)', s:1, m:`${e.chamado_id} estava salvo mas fora da fila: republicado <small>· outbox</small>`};
+    case 'devolucao_ignorada':  return {c:'var(--tinta)', s:1, m:`reaper não devolveu ${e.chamado_id}: já tinha outro dono`};
+    case 'worker_derrubado':    return {c:'var(--samu)', f:1, m:`worker <b>${e.worker_id}</b> caiu <small>· as ambulâncias dele param de mandar sinal</small>`};
+    case 'worker_revivido':     return {c:'var(--samu)', f:1, m:`worker <b>${e.worker_id}</b> subiu de novo <small>· sem a memória dos ciclos antigos</small>`};
+    case 'worker_pausado':      return {c:'var(--samu)', f:1, m:`worker <b>${e.worker_id}</b> congelado por ${e.segundos} s <small>· como uma pausa de GC</small>`};
+    case 'worker_retomado':     return {c:'var(--samu)', f:1, m:`worker <b>${e.worker_id}</b> descongelou <small>· os ciclos antigos tentam continuar</small>`};
+    case 'ocorrencia_criada':   return {c:'var(--samu)', f:1, m:`ocorrência <b>${e.ocorrencia_id}</b>: ${e.vitimas} vítimas em ${e.bairro}`};
+    case 'caos_configurado':    return {c:'var(--samu)', f:1, m:e.ligado ? `falhas na fila ligadas <small>· dup ${Math.round(e.duplicar*100)}% · atraso ${Math.round(e.atrasar*100)}% · ack ${Math.round(e.perder_ack*100)}% · publicação ${Math.round(e.falhar_publicar*100)}%</small>` : 'falhas na fila desligadas'};
+    case 'despachante_adicionado': return {c:'var(--samu)', f:1, m:`+1 despachante <small>· ${e.total} disputando a frota</small>`};
+    case 'despachante_removido':   return {c:'var(--samu)', f:1, m:`−1 despachante <small>· ${e.total} disputando a frota</small>`};
+    case 'processo_reiniciado': return {c:'var(--tinta)', s:1, m:`${e.servico} morreu ao publicar e subiu de novo`};
+    case 'chamado_devolvido':   return {c:'var(--tinta)', s:1, m:`${e.chamado_id} voltou para a fila <small>· tentativa ${e.tentativas}</small>`};
+    case 'ambulancia_reatribuida': return {c:'var(--tinta)', s:1, m:`<b>${e.ambulancia_id}</b> passou de ${e.de} para ${e.para} <small>· ${e.motivo === 'equilibrio' ? 'reequilíbrio da frota' : 'o dono sumiu'}</small>`};
+    case 'ciclo_obsoleto':      return {c:'var(--tinta)', s:1, m:`ciclo antigo de <b>${e.ambulancia_id}</b> recusado <small>· a versão mudou (fencing)</small>`};
+    case 'verificacao_concluida': return {c:e.ok ? 'var(--bom)' : 'var(--samu)', s:1, m:e.ok ? `verificação: 0 violações em ${e.chamados} chamados` : `verificação: ${e.violacoes} violações`};
+    case 'roteador_fallback':   return {c:'var(--tinta)', s:1, m:`roteador indisponível, usando linha reta`};
     case 'fator_alterado':      return {c:'var(--apagado)', m:e.pausada ? 'simulação pausada' : `velocidade ${e.fator}×`};
     default: return null;
   }
@@ -563,7 +772,7 @@ async function eventos(){
   for (const e of lista){
     ultimoTs = Math.max(ultimoTs, e.ts_sim);
     const f = frase(e); if (!f) continue;
-    const li = document.createElement('li'); if (f.s) li.className = 'sist';
+    const li = document.createElement('li'); if (f.s) li.className = 'sist'; if (f.f) li.className = 'falha';
     li.innerHTML = `<span class="t">${hhmm(e.ts_sim)}</span><i class="p${f.s ? ' sist' : ''}" style="--c:${f.c}"></i><span class="m">${f.m}</span>`;
     if (e.chamado_id){ li.dataset.chamado = e.chamado_id; li.classList.add('clic'); li.onclick = () => seguir(e.chamado_id); }
     if (e.tipo === 'chamado_criado' && esperandoProximo && e.ts_sim >= agoraSim() - 120) seguir(e.chamado_id);
@@ -596,7 +805,7 @@ async function turnos(){
 
 // ---- cenarios "e se...?" ----
 const cenSel = new Set(); let cenTimer = null;
-const min1 = v => v == null ? '–' : (v / 60).toFixed(1);
+const min1 = v => v == null ? '–' : num(v / 60, 1);
 const ic = r => r && r.media != null ? `${min1(r.media)} <small>[${min1(r.baixo)}, ${min1(r.alto)}]</small>` : '–';
 const cenNome = f => `${f.n.value} amb · ${f.pol.selectedOptions[0].text}${f.transito.checked ? ' · trânsito' : ''}${f.repos.checked ? ' · repos.' : ''}`;
 $('cenForm').onsubmit = async ev => {
@@ -633,7 +842,7 @@ async function comparar(){
   const d = await r.json(); const na = $('cenLista').querySelector(`[data-id="${a}"] .n`).textContent, nb = $('cenLista').querySelector(`[data-id="${b}"] .n`).textContent;
   const linha = (k, rot, esc = 60, un = 'min') => { const x = d[k]; if (!x || x.media == null) return ''; const s = x.significativo;
     return `<div>${rot}: <b class="${s ? 'sig' : ''}">${x.media > 0 ? '+' : ''}${(x.media / esc).toFixed(1)} ${un}</b> [${(x.baixo / esc).toFixed(1)}, ${(x.alto / esc).toFixed(1)}]${s ? ' ✓' : ' (não significativo)'}</div>`; };
-  el.innerHTML = `<b>${nb}</b> em relação a <b>${na}</b>, mesmas seeds:` + linha('p90', 'P90') + linha('p90_vermelho', 'P90 vermelhos') + linha('Barra', 'P90 Barra') + linha('Oeste', 'P90 Oeste') + linha('pendentes', 'pendentes', 1, 'chamados');
+  el.innerHTML = `<b>${nb}</b> em relação a <b>${na}</b>, mesmas seeds:` + linha('p90', 'P90') + linha('p90_vermelho', 'P90 vermelhos') + linha('Barra', 'P90 ' + ROTULO_ZONA.Barra) + linha('Oeste', 'P90 ' + ROTULO_ZONA.Oeste) + linha('pendentes', 'pendentes', 1, 'chamados');
 }
 // ---- experimento D: onde abrir a proxima base ----
 const camadaExp = L.layerGroup();
@@ -646,11 +855,81 @@ async function expansao(){
     return `<li><b>${f.cand.bairro}</b> <span class="d ${d.significativo ? '' : 'ns'}">${min1(d.media)} min [${min1(d.baixo)}, ${min1(d.alto)}]</span></li>`; }).join('') +
     `<li class="ctrl"><span>mesmas +${e.config.extra} em ${e.config.controle_base}</span><span class="d ${ctrl.significativo ? '' : 'ns'}">${min1(ctrl.media)} min</span></li>`;
   e.triagem.forEach(t => { const fin = e.finalistas.find(f => f.cand.id === t.cand.id);
-    const m = L.circleMarker([t.cand.lat, t.cand.lon], {radius: fin ? 9 : 6, color: fin ? '#3DDC97' : '#5C6F82', weight: fin ? 2 : 1, fillColor: '#3DDC97', fillOpacity: fin ? .35 : .1});
+    const m = L.circleMarker([t.cand.lat, t.cand.lon], {radius: fin ? 10 : 6, color: fin ? '#2D6B4A' : '#7A848B', weight: fin ? 2.5 : 1, dashArray: fin ? null : '2 3', fillColor: '#2D6B4A', fillOpacity: fin ? .18 : .05});
     m.bindTooltip(`<b>${t.cand.bairro}</b><br>${fin ? `P90 ${min1(fin.vs_baseline.p90.media)} min vs frota atual` : `triagem: ${min1(-t.ganho_seg)} min`}`);
     camadaExp.addLayer(m); });
   $('expMapa').onchange = ev => ev.target.checked ? camadaExp.addTo(mapa) : mapa.removeLayer(camadaExp);
 }
+// ---- laboratorio de falhas (so aparece se a API tiver /lab) ----
+const INVS = [['I1','uma ambulância, um chamado de cada vez',1],['I2','cada chamado concluído uma vez',1],
+              ['I5','uma ambulância por vítima',1],['I3','nenhum chamado perdido',0],['I4','nenhuma ambulância presa',0]];
+const TAXAS = [['duplicar','duplicar mensagem'],['atrasar','atrasar mensagem'],['perder_ack','perder o ack'],['falhar_publicar','morrer ao publicar']];
+const PRESETS = {leve:{duplicar:.05,atrasar:.05,perder_ack:.02,falhar_publicar:.01}, moderado:{duplicar:.1,atrasar:.1,perder_ack:.05,falhar_publicar:.02},
+                 pesado:{duplicar:.3,atrasar:.2,perder_ack:.15,falhar_publicar:.08}};
+let labOn = false, marcando = false;
+const camadaOc = L.layerGroup().addTo(mapa), ocMarkers = {};
+const post = (url, body) => fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body: body ? JSON.stringify(body) : null});
+$('taxas').innerHTML = TAXAS.map(([k, l]) => `<label for="tx-${k}">${l}</label><input type="range" id="tx-${k}" min="0" max="50" step="1" data-k="${k}"><output id="out-${k}">0%</output>`).join('');
+$('taxas').addEventListener('input', ev => { const i = ev.target; if (i.dataset.k) $('out-' + i.dataset.k).textContent = i.value + '%'; });
+$('taxas').addEventListener('change', ev => { const i = ev.target; if (i.dataset.k) post('/lab/caos', {[i.dataset.k]: i.value / 100}).then(lab); });
+$('caosChave').onclick = () => post('/lab/caos', {ligado: $('caosChave').getAttribute('aria-checked') !== 'true'}).then(lab);
+document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => post('/lab/caos', {...PRESETS[b.dataset.preset], ligado: true}).then(lab));
+$('despMais').onclick = () => post('/lab/despachantes/mais').then(lab);
+$('despMenos').onclick = () => post('/lab/despachantes/menos').then(lab);
+$('btnVerificar').onclick = () => post('/lab/verificar').then(lab);
+$('procs').addEventListener('click', ev => { const b = ev.target.closest('button[data-w]'); if (!b) return;
+  post(`/lab/worker/${b.dataset.w}/${b.dataset.a}${b.dataset.a === 'pausar' ? '?segundos=10' : ''}`).then(lab); });
+function modoMarcar(on){ marcando = on; $('ocMarcar').classList.toggle('marcando', on);
+  $('ocMarcar').textContent = on ? 'Clique no mapa… (Esc cancela)' : 'Marcar o local no mapa';
+  $('mapa').classList.toggle('mapa-marcando', on);
+  const av = document.querySelector('.aviso-marcar'); if (on && !av){ const d = document.createElement('div'); d.className = 'aviso-marcar'; d.textContent = 'Clique onde aconteceu a ocorrência'; document.querySelector('.mapa-wrap').appendChild(d); } else if (!on && av) av.remove(); }
+$('ocMarcar').onclick = () => modoMarcar(!marcando);
+addEventListener('keydown', ev => { if (ev.key === 'Escape' && marcando) modoMarcar(false); });
+mapa.on('click', async ev => { if (!marcando) return; modoMarcar(false);
+  await post('/lab/ocorrencia', {lat: ev.latlng.lat, lon: ev.latlng.lng, vitimas: +$('ocVitimas').value || 6, prioridade: $('ocPri').value}); lab(); });
+document.querySelectorAll('#abas button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#abas button').forEach(x => { x.setAttribute('aria-selected', String(x === b)); $(x.dataset.p).hidden = x !== b; }); });
+
+function renderLab(l){
+  // invariantes: I1/I2/I5 ao vivo; I3/I4 so depois de drenar
+  const vivo = l.invariantes_ao_vivo.por_invariante || {}, ver = l.veredito && l.veredito.status === 'concluido' ? l.veredito : null;
+  const drenando = l.veredito && l.veredito.status === 'drenando';
+  $('inv').innerHTML = INVS.map(([k, nome, aoVivo]) => {
+    const n = aoVivo ? (vivo[k] || 0) : (ver ? (ver.por_invariante[k] || 0) : null);
+    const cls = n == null ? 'espera' : n ? 'ruim' : '';
+    return `<div class="${cls}"><b>${k}</b><span>${nome}</span><small>${n == null ? (drenando ? 'drenando…' : 'após drenar') : n ? n + ' violação' + (n > 1 ? 'ões' : '') : 'ok'}</small></div>`; }).join('');
+  const ruim = !l.invariantes_ao_vivo.ok || (ver && !ver.ok);
+  $('luzInv').classList.toggle('ruim', ruim);
+  $('invResumo').textContent = ruim ? 'há violações' : 'verificadas a cada evento';
+  // falhas
+  $('caosChave').setAttribute('aria-checked', String(l.caos.ligado));
+  for (const [k] of TAXAS){ const i = $('tx-' + k); if (document.activeElement !== i){ i.value = Math.round(l.caos[k] * 100); $('out-' + k).textContent = i.value + '%'; } }
+  // processos
+  $('procs').innerHTML = l.workers.map(w => `<div class="proc"><div class="nome">worker ${w.id}<em class="${w.estado}">${{vivo:'vivo', caido:'caído', pausado:'congelado'}[w.estado]}</em></div>
+    <div class="info">${w.ciclos} ciclo${w.ciclos === 1 ? '' : 's'} em voo</div>
+    <div class="acoes"><button class="lab-btn alerta" data-w="${w.id}" data-a="derrubar" ${w.estado !== 'vivo' ? 'disabled' : ''}>Derrubar</button>
+    <button class="lab-btn" data-w="${w.id}" data-a="pausar" ${w.estado !== 'vivo' ? 'disabled' : ''}>Congelar 10 s</button>
+    <button class="lab-btn" data-w="${w.id}" data-a="reviver" ${w.estado === 'vivo' ? 'disabled' : ''}>Reviver</button></div></div>`).join('');
+  $('despN').textContent = l.despachantes.length;
+  // falha -> recuperacao
+  $('pares').innerHTML = l.pares.map(p => `<div class="par"><div><b>${p.falha}</b><span class="n ${p.n_injetadas ? '' : 'zero'}">${p.n_injetadas == null ? 'consequência' : p.n_injetadas + '× injetada'}</span></div>
+    <div class="seta">→</div><div><b>${p.mecanismo}</b><span class="n rec ${p.n_recuperacoes ? '' : 'zero'}">${p.n_recuperacoes}× resolvida</span><small>${p.eventos.join(' · ')}</small></div></div>`).join('');
+  // ocorrencias
+  $('ocLista').innerHTML = [...l.ocorrencias].reverse().map(o => { const t = Math.max(1, o.vitimas), a = o.atendidos || 0, c = o.a_caminho || 0, g = o.aguardando || 0;
+    return `<li><div class="l1"><span><b>${o.id}</b> · ${o.bairro}</span><span>${a}/${o.vitimas} atendidas</span></div>
+      <div class="barra"><i style="width:${100*a/t}%;background:var(--tinta)"></i><i style="width:${100*c/t}%;background:var(--samu)"></i><i style="width:${100*g/t}%;background:var(--samu-claro)"></i></div></li>`; }).join('');
+  for (const o of l.ocorrencias){ if (!ocMarkers[o.id]) ocMarkers[o.id] = L.marker([o.lat, o.lon], {icon: L.divIcon({className: '', html: `<div class="ico-oc">${o.vitimas}</div>`, iconSize: [34, 34], iconAnchor: [17, 17]}), zIndexOffset: 500})
+      .bindTooltip(`<b>${o.id}</b><br>${o.vitimas} vítimas · ${o.bairro}`).addTo(camadaOc);
+    if ((o.atendidos || 0) >= o.vitimas){ camadaOc.removeLayer(ocMarkers[o.id]); } }
+  // veredito
+  const v = $('veredito'), b = $('btnVerificar'); b.disabled = drenando;
+  if (drenando){ v.className = 'veredito'; v.innerHTML = '<b>Drenando…</b>falhas desligadas, processos de volta e relógio a 300× até todos os chamados abertos terminarem.'; }
+  else if (ver){ v.className = 'veredito ' + (ver.ok ? 'ok' : 'ruim');
+    v.innerHTML = ver.ok ? `<b>0 violações</b>${ver.chamados_julgados} chamados julgados (${ver.tempo_sim_min} min simulados em ${ver.tempo_real_seg} s): nenhum perdido, nenhuma ambulância presa, ninguém atendido em dobro.`
+      : `<b>${ver.violacoes.length} violação(ões)</b><ul>${ver.violacoes.slice(0, 6).map(x => `<li>${x.invariante}: ${x.detalhe}</li>`).join('')}</ul>`; }
+}
+async function lab(){ try { const r = await fetch('/lab'); if (!r.ok) return; if (!labOn){ labOn = true; $('abas').hidden = false; } renderLab(await r.json()); } catch {} }
+lab(); setInterval(() => { if (labOn) lab(); }, 1500);
 pollEstado(); metricas(); eventos(); conectar(); turnos(); cenarios(); expansao();
 setInterval(metricas, 3000); setInterval(eventos, 1500);
 </script>

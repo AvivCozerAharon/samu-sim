@@ -1,5 +1,5 @@
 """Turnos que aprendem: roda o otimizador de alocacao por base e grava a trajetoria.
-Uso: python scripts/turnos.py --turnos 10 --ambulancias 73 --chamados-por-dia 600
+Uso: python scripts/turnos.py --turnos 10 --ambulancias 73
 Saida: docs/experimentos/turnos.json (trajetoria) e dados/alocacao.json (melhor alocacao)."""
 import argparse
 import json
@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from samu_sim import local as runner  # noqa: E402
 from samu_sim.core.config import Config  # noqa: E402
-from samu_sim.gerador.demanda import carregar_bairros, carregar_bases  # noqa: E402
+from samu_sim.gerador.demanda import CHAMADOS_POR_DIA_RIO, carregar_bairros, carregar_bases  # noqa: E402
 from samu_sim.local import montar_frota  # noqa: E402
 from samu_sim.otimizador import Otimizador  # noqa: E402
 
@@ -20,11 +20,11 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--turnos", type=int, default=10)
     p.add_argument("--ambulancias", type=int, default=73)
-    p.add_argument("--chamados-por-dia", type=int, default=600)
+    p.add_argument("--chamados-por-dia", type=int, default=CHAMADOS_POR_DIA_RIO)
     p.add_argument("--politica", default="menor_eta")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--duracao-sim", type=float, default=24 * 3600)
-    p.add_argument("--fator", type=float, default=2000)
+    p.add_argument("--fator", type=float, default=500)  # acima disso o simulador atrasa o relogio (README)
     p.add_argument("--saida", default="docs/experimentos/turnos.json")
     p.add_argument("--alocacao-saida", default="dados/alocacao.json")
     a = p.parse_args()

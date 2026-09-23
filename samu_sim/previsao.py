@@ -15,10 +15,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from samu_sim.core.geo import haversine_km
-from samu_sim.core.modelos import Base, StatusAmbulancia
+from samu_sim.core.modelos import ZONAS, Base, StatusAmbulancia
 from samu_sim.gerador.demanda import Bairro
 
-ZONAS = ("Centro", "Sul", "Norte", "Barra", "Oeste")
 RAIO_REPOSICIONAMENTO_KM = 8.0
 GANHO_MINIMO = 1.5  # so muda de base se a pressao la for >= 1.5x a da base atual
 HORAS_PREVISAO = 2

@@ -1,6 +1,6 @@
 # Calibração do modelo — o que é dado real, o que é estimado, e de onde veio
 
-Atualizado em 2026-09-19 (D6).
+Atualizado em 2026-09-23 (D10: volume sem transferências, zonas por Área de Planejamento).
 
 ## Bairros e população — **dado real**
 
@@ -10,8 +10,11 @@ Atualizado em 2026-09-19 (D6).
   publicado no [Data.Rio](https://www.data.rio/datasets/fd354740f1934bf5bf8e9b0e2b509aa9_2/about).
   Bruto em `dados/fontes/censo2022_bairros_geo.json`; `scripts/preparar_dados.py` gera `dados/bairros.csv`.
 - População total: 6.211.223. Centróide de cada bairro = centróide do maior anel do polígono.
-- Zonas (Centro/Sul/Norte/Barra/Oeste) = agrupamento das 33 regiões administrativas por Área de
-  Planejamento (`ZONA_POR_RA` no script). Paquetá (ilha) fica com demanda zero.
+- Zonas = agrupamento das 33 regiões administrativas por Área de Planejamento (`ZONA_POR_RA` no
+  script; rótulos em `samu_sim.core.modelos.ROTULO_ZONA`): Centro (AP1), Sul (AP2.1), Norte (AP2.2 e AP3),
+  **Barra e Jacarepaguá (AP4)** e **Oeste (AP5: Bangu, Realengo, Campo Grande, Santa Cruz, Guaratiba)**.
+  No uso comum carioca "Zona Oeste" inclui a AP4; aqui elas ficam separadas porque têm malha e
+  cobertura muito diferentes. Paquetá (ilha) fica com demanda zero.
 
 ## Bases — **dado real (localização parcialmente estimada)**
 
@@ -26,9 +29,22 @@ Atualizado em 2026-09-19 (D6).
 
 ## Demanda — **calibrado com estatística real**
 
-- Volume: **216 mil envios de ambulância em 2024** ≈ 592/dia → `chamados_por_dia = 600`
+- Volume: **665 mil ligações e 216 mil atendimentos em 2024**
   ([Diário do Rio](https://diariodorio.com/samu-do-rio-registra-mais-de-660-mil-chamadas-e-216-mil-atendimentos-em-2024/)).
-  Das 665 mil ligações, 4,6 % eram trote (não modelado: só envios).
+  Os 216 mil **incluem transferências entre hospitais** (a mesma fonte fala em 40 mil; a SES-RJ, em
+  33.853 transportes concluídos), feitas por uma frota à parte de 44 ambulâncias de transporte. Tirando
+  as transferências: **~176–182 mil envios de emergência ≈ 490/dia** para as 73 ambulâncias →
+  `CHAMADOS_POR_DIA_RIO = 490` (`samu_sim/gerador/demanda.py`). Das ligações, 4,6 % eram trote, e a maior
+  parte do resto é resolvida por telefone pelo médico regulador (não modelado: só envios).
+  - *Correção (D10):* até o D9 o modelo usava 600/dia, calibrado nos 216 mil com transferências — ~20 %
+    acima da demanda real de emergência. Os experimentos foram refeitos com 490.
+  - Ordem de grandeza: o SAMU da capital paulista (11 milhões de habitantes, 120 ambulâncias) tem
+    ~1.200 ligações e ~350 saídas de ambulância por dia
+    ([Prefeitura de SP, dez/2023](https://prefeitura.sp.gov.br/w/noticia/samu-da-capital-agiliza-atendimento-com-novo-sistema)).
+  - Operação: desde 2020 o SAMU 192 da capital é da Secretaria de Estado de Saúde, em parceria com os
+    Bombeiros, que cedem os quartéis como base
+    ([SES-RJ](https://www.saude.rj.gov.br/noticias/2020/03/ses-assume-operacao-do-samu-192-na-capital)).
+    O resgate dos Bombeiros (193) não entra nestes números.
 - Distribuição espacial: população × `fator_demanda`. Ranking real 2024: **Campo Grande (12.614 ≈ 5,8 %),
   Santa Cruz, Centro**. Com população pura o Centro (23,6 mil residentes) fica fora do top 20; o
   fator 9,5 (população flutuante: trabalho, comércio, população de rua) o coloca em 3º com ~3,5 %.

@@ -67,24 +67,68 @@ def test_tempo_de_resposta_registrado():
     assert chegou["resposta_seg"] >= 300.0
 
 
-def test_heartbeat_so_nas_ambulancias_ativas_do_worker():
+def montar_lento():
+    """Relogio real (fator 1): o ciclo fica em voo durante o teste."""
     relogio, repo, fila, log, w = montar()
+    w._relogio = Relogio(fator=1)
+    return relogio, repo, fila, log, w
+
+
+def test_heartbeat_so_nas_ambulancias_com_ciclo_em_voo_neste_processo():
+    relogio, repo, fila, log, w = montar_lento()
     repo.salvar_ambulancia(Ambulancia(id="amb-2", base_id="b1", lat=0, lon=0, worker_id="w1"))  # disponivel
     repo.salvar_ambulancia(Ambulancia(id="amb-9", base_id="b1", lat=0, lon=0, worker_id="w9"))  # outro worker
     repo.reservar_ambulancia("amb-9", 0, "ch-x")
-    despachar(repo, fila)  # amb-1 reservada pelo w1
+    despachar(repo, fila)
     w._agora_real = lambda: 777.0
+    assert w.bater_heartbeat() == 0  # reservada, mas o ciclo ainda nao comecou aqui
+    w.processar_lote()
     assert w.bater_heartbeat() == 1
     assert repo.obter_ambulancia("amb-1").heartbeat_em == 777.0
     assert repo.obter_ambulancia("amb-2").heartbeat_em == 0.0
     assert repo.obter_ambulancia("amb-9").heartbeat_em == 0.0
+    w.derrubar()
+    w.aguardar_ciclos(timeout=2)
+    w.encerrar()
+
+
+def test_worker_reiniciado_nao_mantem_viva_ambulancia_do_ciclo_que_morreu():
+    """O bug: o heartbeat listava todas as nao disponiveis do worker no banco. Apos um restart,
+    o worker novo mantinha vivas as ambulancias do ciclo perdido e o reaper nunca as liberava."""
+    relogio, repo, fila, log, w = montar_lento()
+    despachar(repo, fila)
+    w.processar_lote()
+    assert repo.obter_ambulancia("amb-1").status == SA.A_CAMINHO
+    w.derrubar()
+    w.reviver()  # o container voltou: a memoria dos ciclos antigos se perdeu
+    assert w.bater_heartbeat() == 0
+    w.derrubar()
+    w.aguardar_ciclos(timeout=2)
+    w.encerrar()
+
+
+def test_ciclo_pausado_nao_usa_a_versao_nova_da_ambulancia():
+    """Fencing: o ciclo carrega a versao da sua ultima transicao. Se a ambulancia mudou de dono
+    enquanto ele estava parado, a proxima escrita falha e o ciclo para (ciclo_obsoleto)."""
+    relogio, repo, fila, log, w = montar()
+    despachar(repo, fila)
+    a = repo.obter_ambulancia("amb-1")
+    a2 = repo.transicionar("amb-1", SA.RESERVADA, SA.A_CAMINHO, a.versao)
+    # enquanto o ciclo "dormia": reaper liberou e a ambulancia foi reservada de novo
+    b = repo.liberar_ambulancia("amb-1", a2.versao, 0.0, 0.0)
+    b = repo.reservar_ambulancia("amb-1", b.versao, "ch-1")
+    b = repo.transicionar("amb-1", SA.RESERVADA, SA.A_CAMINHO, b.versao)
+    w._ciclo_rastreado("amb-1", "ch-1", 10.0, a2.versao)
+    assert log.contar("ciclo_obsoleto") == 1 and log.contar("chegou") == 0
+    assert repo.obter_ambulancia("amb-1").versao == b.versao  # ninguem mexeu
 
 
 def test_thread_de_heartbeat_roda_e_para():
     import threading
     import time
-    relogio, repo, fila, log, w = montar()
+    relogio, repo, fila, log, w = montar_lento()
     despachar(repo, fila)
+    w.processar_lote()
     parar = threading.Event()
     t = w.iniciar_heartbeat(intervalo_seg=0.02, parar=parar)
     time.sleep(0.1)
@@ -92,6 +136,9 @@ def test_thread_de_heartbeat_roda_e_para():
     t.join(timeout=1)
     assert not t.is_alive()
     assert repo.obter_ambulancia("amb-1").heartbeat_em > 0
+    w.derrubar()
+    w.aguardar_ciclos(timeout=2)
+    w.encerrar()
 
 
 def test_mensagem_antiga_para_ambulancia_reatribuida_e_rejeitada():
@@ -183,3 +230,16 @@ def test_reserva_durante_o_retorno_interrompe_sem_sobrescrever_posicao():
     assert b.status == SA.RESERVADA and b.chamado_id == "ch-2"
     assert (b.lat, b.lon) != (BASE.lat, BASE.lon)          # posicao nao foi "teleportada" para a base
     assert log.contar("retorno_interrompido") == 1
+
+
+def test_worker_para_o_ciclo_se_o_chamado_foi_retomado():
+    relogio, repo, fila, log, w = montar()
+    despachar(repo, fila)
+    c = repo.obter_chamado("ch-1")
+    c.ambulancia_id = "amb-2"  # o reaper devolveu e outro despachou
+    repo.salvar_chamado(c)
+    velho = repo.obter_chamado("ch-1")
+    velho.ambulancia_id = "amb-1"
+    assert w._gravar_chamado(velho, "amb-1") is False
+    assert log.contar("chamado_retomado") == 1
+    assert repo.obter_chamado("ch-1").ambulancia_id == "amb-2"
