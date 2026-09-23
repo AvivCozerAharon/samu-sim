@@ -48,3 +48,15 @@ def test_ack_de_mensagem_ja_reentregue_nao_quebra():
     f.ack(m1)
     assert f.tamanho() == 0
     f.ack(m2)  # idempotente
+
+
+def test_adiar_devolve_a_mensagem_antes_do_visibility_timeout():
+    tempo = Tempo()
+    f = FilaMemoria(visibilidade_seg=30, agora=tempo.agora)
+    f.publicar({"x": 1})
+    m = f.receber()[0]
+    f.adiar(m, 2)
+    tempo.t = 1.9
+    assert f.receber() == []
+    tempo.t = 2.0
+    assert len(f.receber()) == 1

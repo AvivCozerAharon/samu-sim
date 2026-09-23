@@ -18,7 +18,7 @@ x-servico: &servico
     RODADA_ID: ${RODADA_ID:-aws}
     S3_BUCKET: ${S3_BUCKET:-}
     REPOSICIONAMENTO: ${REPOSICIONAMENTO:-0}
-    TRANSITO: ${TRANSITO:-0}
+    TRANSITO: ${TRANSITO:-1}  # fator de transito por hora; 0 desliga
     CENARIOS_FATOR_MAX: ${CENARIOS_FATOR_MAX:-500}
   volumes:
     - ./logs:/logs

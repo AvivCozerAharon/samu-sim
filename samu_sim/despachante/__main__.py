@@ -24,7 +24,8 @@ def main() -> None:
     rot = criar_roteador(rodada.roteador, cfg, relogio=relogio,
                          ao_falhar=lambda m: log.registrar("roteador_fallback", motivo=m))
     d = Despachante(infra.fila_chamados, infra.filas_eventos, infra.repo,
-                    criar_politica(rodada.politica), rot, relogio, log)
+                    criar_politica(rodada.politica), rot, relogio, log,
+                    reentrega_seg=cfg.reentrega_sem_ambulancia_seg)
 
     def trocar_politica(rod):
         d._politica = criar_politica(rod.politica)

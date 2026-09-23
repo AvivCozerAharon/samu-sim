@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from samu_sim.api.reaper import Reaper
+from samu_sim.roteador import FATORES_TRANSITO
 from samu_sim.cenarios import Cenario, comparar
 from samu_sim.core.metricas import calcular
 from samu_sim.core.modelos import Base, StatusChamado
@@ -64,6 +65,21 @@ class _LeitorEventos:
             return [e for e in self._buffer if e.get("ts_sim", 0) > ts_sim][-limite:]
 
 
+class LabCaos(BaseModel):
+    ligado: bool | None = None
+    duplicar: float | None = Field(default=None, ge=0, le=0.5)
+    atrasar: float | None = Field(default=None, ge=0, le=0.5)
+    perder_ack: float | None = Field(default=None, ge=0, le=0.5)
+    falhar_publicar: float | None = Field(default=None, ge=0, le=0.5)
+
+
+class LabOcorrencia(BaseModel):
+    lat: float
+    lon: float
+    vitimas: int = Field(default=5, ge=1, le=20)
+    prioridade: str = "vermelho"
+
+
 class Controle(BaseModel):
     fator: float | None = Field(default=None, ge=0)
     pausada: bool | None = None
@@ -73,9 +89,11 @@ class Controle(BaseModel):
 def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], relogio: Relogio,
               eventlog: EventLog, agora_real=time.time, reaper_timeout_seg: float = 120.0,
               intervalo_ws_seg: float = 1.0, log_dir=None, rodada_id: str | None = None,
-              turnos_path=None, gerenciador_cenarios=None, expansao_path=None) -> FastAPI:
+              turnos_path=None, gerenciador_cenarios=None, expansao_path=None,
+              fator_max: float = 2000.0, transito: bool = False, laboratorio=None) -> FastAPI:
     app = FastAPI(title="samu-sim")
-    app.state.reaper = Reaper(repo, fila_chamados, bases, eventlog, reaper_timeout_seg, agora_real)
+    app.state.reaper = Reaper(repo, fila_chamados, bases, eventlog, reaper_timeout_seg, agora_real,
+                              agora_sim=relogio.agora_sim)
     app.state.relogio = relogio
     rodada_inicial = repo.obter_rodada()
     # ultimo fator > 0 visto; enquanto pausada a rodada guarda fator=0 e este valor restaura no despause
@@ -106,6 +124,9 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
             ambulancias.append(item)
         return {
             "agora_sim": agora,
+            "transito": {"ligado": transito,
+                         "fator": FATORES_TRANSITO[int((agora % 86400) // 3600)] if transito else 1.0,
+                         "por_hora": FATORES_TRANSITO if transito else None},
             "fator": rodada.fator if rodada else relogio.fator,
             "pausada": bool(rodada.pausada) if rodada else relogio.pausado,
             "rodada": asdict(rodada) if rodada else None,
@@ -115,7 +136,8 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
                                   "prioridade": c.prioridade, "tipo": c.tipo,
                                   "status": str(c.status), "criado_em": c.criado_em,
                                   "ambulancia_id": c.ambulancia_id, "despachado_em": c.despachado_em,
-                                  "chegada_prevista_em": c.chegada_prevista_em, "chegada_em": c.chegada_em}
+                                  "chegada_prevista_em": c.chegada_prevista_em, "chegada_em": c.chegada_em,
+                                  "ocorrencia_id": c.ocorrencia_id}
                                  for c in abertos],
         }
 
@@ -225,11 +247,59 @@ def criar_app(repo: Repositorio, fila_chamados: Fila, bases: dict[str, Base], re
         return calcular(chamados) | {"agora_sim": agora,
                                      "fila": {"pendentes": len(pendentes), "idade_max_seg": idade}}
 
+    # --- laboratorio de falhas (so no modo em memoria: scripts/dev_api.py) ---
+    def _lab():
+        if laboratorio is None:
+            raise HTTPException(status_code=404, detail="laboratorio desligado nesta instancia")
+        return laboratorio
+
+    @app.get("/lab")
+    def lab_estado():
+        return _lab().estado()
+
+    @app.post("/lab/caos")
+    def lab_caos(cmd: LabCaos):
+        _lab().configurar_caos(**cmd.model_dump())
+        return laboratorio.estado()["caos"]
+
+    @app.post("/lab/worker/{worker_id}/{acao}")
+    def lab_worker(worker_id: str, acao: str, segundos: float = 10.0):
+        try:
+            return {"estado": _lab().worker(worker_id, acao, min(max(segundos, 1.0), 60.0))}
+        except KeyError:
+            raise HTTPException(status_code=404, detail=f"worker {worker_id} nao existe")
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+    @app.post("/lab/despachantes/{acao}")
+    def lab_despachantes(acao: str):
+        lab = _lab()
+        if acao not in ("mais", "menos"):
+            raise HTTPException(status_code=422, detail="use mais ou menos")
+        return {"total": lab.adicionar_despachante() if acao == "mais" else lab.remover_despachante()}
+
+    @app.post("/lab/ocorrencia")
+    def lab_ocorrencia(cmd: LabOcorrencia):
+        if cmd.prioridade not in ("vermelho", "amarelo", "verde"):
+            raise HTTPException(status_code=422, detail="prioridade invalida")
+        return _lab().ocorrencia(cmd.lat, cmd.lon, cmd.vitimas, cmd.prioridade)
+
+    @app.post("/lab/verificar", status_code=202)
+    def lab_verificar():
+        lab = _lab()
+        if (lab.estado()["veredito"] or {}).get("status") == "drenando":
+            raise HTTPException(status_code=409, detail="ja esta drenando")
+        threading.Thread(target=lab.drenar_e_verificar, daemon=True).start()
+        return {"status": "drenando"}
+
     @app.post("/controle")
     def controle(cmd: Controle):
         rodada = repo.obter_rodada()
         if rodada is None:
             raise HTTPException(status_code=409, detail="rodada nao inicializada; rode o bootstrap")
+        if cmd.fator is not None and cmd.fator > fator_max:
+            # acima do teto o proprio simulador vira o gargalo e o P90 medido deixa de ser da cidade
+            raise HTTPException(status_code=422, detail=f"fator {cmd.fator:g} acima do teto {fator_max:g}")
         if cmd.fator is not None and cmd.fator > 0:
             app.state.fator_ativo = cmd.fator
         if cmd.pausada is not None:

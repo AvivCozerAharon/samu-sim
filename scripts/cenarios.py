@@ -12,8 +12,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from samu_sim import local as runner  # noqa: E402
 from samu_sim.cenarios import METRICAS, Cenario, comparar, executar  # noqa: E402
+from samu_sim.core.modelos import ZONAS  # noqa: E402
+from samu_sim.gerador.demanda import CHAMADOS_POR_DIA_RIO  # noqa: E402
 
-MINUTOS = {"p90", "p50", "p90_vermelho", "Centro", "Sul", "Norte", "Barra", "Oeste"}
+MINUTOS = {"p90", "p50", "p90_vermelho", *ZONAS}
 
 
 def fmt(ic: dict, chave: str) -> str:
@@ -29,8 +31,8 @@ def main() -> None:
     p.add_argument("--alt", required=True, help="JSON do cenario alternativo")
     p.add_argument("--seeds", type=int, nargs="+", default=[42, 7, 2024])
     p.add_argument("--duracao-sim", type=float, default=86400)
-    p.add_argument("--fator", type=float, default=2000)
-    p.add_argument("--chamados-por-dia", type=int, default=600)
+    p.add_argument("--fator", type=float, default=500)  # acima disso o simulador atrasa o relogio (README)
+    p.add_argument("--chamados-por-dia", type=int, default=CHAMADOS_POR_DIA_RIO)
     p.add_argument("--saida", default=None, help="grava os dois resultados + comparacao em JSON")
     a = p.parse_args()
     runner.INTERVALO_OCIOSO_REAL = 0.005

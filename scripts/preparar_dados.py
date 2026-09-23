@@ -10,7 +10,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-# Regiao administrativa (RA) -> zona usada pelo simulador (agrupamento por Area de Planejamento)
+# Regiao administrativa (RA) -> zona usada pelo simulador (agrupamento por Area de Planejamento;
+# os rotulos com a AP ficam em samu_sim.core.modelos.ROTULO_ZONA)
 ZONA_POR_RA = {
     "CENTRO": "Centro", "PORTUARIA": "Centro", "RIO COMPRIDO": "Centro", "SANTA TEREZA": "Centro",
     "SAO CRISTOVAO": "Centro", "PAQUETA": "Centro",
