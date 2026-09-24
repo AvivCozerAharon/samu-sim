@@ -11,8 +11,8 @@ Acabou virando uma ferramenta de decisão. São três perguntas, cada uma respon
 confiança: qual política de despacho reduz o tempo de resposta na Zona Oeste, a partir de quantas
 ambulâncias o ganho fica marginal, e onde abrir a próxima base.
 
-Como funciona. Chamados sintéticos — proporcionais à população de cada bairro, com picos por volta de
-meio-dia e das 20 h — entram numa fila SQS. N despachantes concorrentes escolhem a ambulância por uma
+Como funciona. Chamados sintéticos, proporcionais à população de cada bairro e com picos por volta de
+meio-dia e das 20 h, entram numa fila SQS. N despachantes concorrentes escolhem a ambulância por uma
 política plugável e disputam a reserva com lock otimista no DynamoDB. Workers simulam o deslocamento
 pela malha viária real (OSRM) em tempo acelerado. Um reaper recupera as ambulâncias de workers que
 morreram. Uma API expõe as métricas e um console ao vivo.
@@ -64,10 +64,11 @@ O terceiro resultado é o que eu não esperava. A política de "não esvaziar a 
 uma ambulância mais longe para preservar cobertura, e o custo de resposta supera o ganho. Eu estava
 convencido do contrário quando implementei, e só a medição mostrou.
 
-**Validação distribuída (D5, modelo anterior):** o mesmo cenário rodado na AWS — EC2 com 6
-containers, SQS e DynamoDB reais — contra o modelo em memória, 1 seed, 6 h simuladas, 50 ambulâncias
-e 19 bairros: P90 29,7 × 29,5 min (< 1 %), P50 8,3 × 7,8 min (~6 %) (`scripts/experimento_aws.sh`).
-Não foi refeita depois dos dados reais (D6); é o próximo teste a repetir.
+Validação distribuída (D5, modelo anterior): rodei o mesmo cenário na AWS, numa EC2 com 6 containers
+e SQS e DynamoDB reais, contra o modelo em memória. Com 1 seed, 6 h simuladas, 50 ambulâncias e 19
+bairros, deu P90 29,7 contra 29,5 min (menos de 1 % de diferença) e P50 8,3 contra 7,8 min (uns 6 %).
+Está em `scripts/experimento_aws.sh`. Não refiz depois dos dados reais do D6, e é o próximo teste que
+eu quero repetir.
 
 ## Realismo operacional (D8): o que cada correção do modelo mudou
 
@@ -82,49 +83,58 @@ Três correções, medidas uma a uma na frota real de 73 (3 seeds, 24 h):
 | + trânsito por hora | 9,5 | 20,9 | 21,8 |
 | + ambos | 10,0 | 21,3 | 21,0 |
 
-- **Disponível ao liberar** (antes só voltava a ser despachável na base): P90 com 73 caiu de 16,0
-  para 15,4 min e o joelho da frota deslocou-se para baixo. Era o maior erro do modelo — ambulância
-  ociosa num hospital que fica exatamente onde a demanda está.
-- **Reposicionamento** (a ambulância liberada vai para a base de maior demanda prevista nas próximas
-  2 h relativa à cobertura, dentro de 8 km, e só se a pressão for ≥ 1,5× a da base atual): efeito
-  **neutro** (−0,3 min, dentro do ruído). A primeira versão, sem limiar e com raio de 15 km, *piorava*
-  1,3 min: o custo do deslocamento superava o ganho. Com 43 bases já bem distribuídas, sobra pouco
-  para reposicionar — o modelo de demanda é honesto (treinado só com `chamado_criado`, aprende os picos
-  de 12 h/19 h por zona), mas a decisão que ele alimenta não move o ponteiro aqui.
-- **Trânsito** (fator por hora sobre o tempo de via livre do OSRM, ≈ +50 % nos picos): +5,5 min de
-  P90. É a correção que mais muda a conclusão: com trânsito, a meta de 15 min fica fora de alcance
-  para qualquer frota testada.
+O maior erro do modelo era a ambulância só voltar a ser despachável quando chegava na base. Ela ficava
+ociosa num hospital que fica exatamente onde a demanda está. Passando a despachá-la ao ser liberada, o
+P90 com 73 caiu de 16,0 para 15,4 min e o joelho da curva de frota desceu junto.
+
+O reposicionamento foi mais frustrante. A ideia é mandar a ambulância liberada para a base de maior
+demanda prevista nas próximas 2 h, dentro de 8 km, e só se a pressão lá for pelo menos 1,5 vez a da
+base atual. Efeito neutro: −0,3 min, dentro do ruído. E a primeira versão, sem limiar e com raio de
+15 km, piorava 1,3 min, porque o custo do deslocamento comia o ganho. Com 43 bases já bem distribuídas
+sobra pouco para reposicionar. O modelo de demanda em si é honesto (treina só com `chamado_criado` e
+aprende os picos de 12 h e 19 h por zona), mas a decisão que ele alimenta não move o ponteiro aqui.
+
+Trânsito é a correção que mais muda a conclusão. Um fator por hora sobre o tempo de via livre do
+OSRM, uns 50 % a mais nos picos, custa +5,5 min de P90, e com ele a meta de 15 min sai do alcance
+de qualquer frota que eu testei.
 
 ## Prioridade e turnos que aprendem (D7)
 
 ![turnos](docs/img/c_turnos.png)
 
-**Prioridade.** Cada chamado nasce com a classificação do regulador (vermelho 10 % / amarelo 30 % /
-verde 60 %). São três filas SQS; o despachante só desce de nível quando a fila acima está vazia,
-e o reaper devolve o chamado à fila da sua prioridade. A métrica que importa passa a ser o
-**P90 dos vermelhos**, e o objetivo dos experimentos é `J = 3·P90(vermelho) + P90(amarelo) + ½·P90(verde)`.
+Cada chamado nasce com a classificação do regulador: vermelho 10 %, amarelo 30 %, verde 60 %. São
+três filas SQS, o despachante só desce de nível quando a de cima está vazia, e o reaper devolve o
+chamado à fila da prioridade dele. Com isso a métrica que importa deixa de ser o P90 geral e passa a
+ser o P90 dos vermelhos. O objetivo dos experimentos vira
+`J = 3·P90(vermelho) + P90(amarelo) + ½·P90(verde)`.
 
-**Turnos.** `scripts/turnos.py` roda o dia simulado repetidamente. A cada turno o otimizador lê o
+`scripts/turnos.py` roda o dia simulado repetidamente. A cada turno o otimizador lê o
 resultado e escreve o diagnóstico em linguagem simples — *"Zona Barra tem o pior resultado: P90 21 min;
 UPA Paciência está ociosa 98 % do tempo com 2 ambulâncias; mover 1 ambulância de UPA Paciência para
-UPA Jacarepaguá (cobre 607 mil hab. num raio de 5 km)"* — aplica o movimento, mede, e **mantém se J
-caiu ≥ 2 %, desfaz se não** (hill-climbing com memória do que já tentou). Resultado em 10 turnos com a
-frota real de 73: **J 80,9 → 72,6 (−10 %)**, P90 global 16,4 → 14,2 min, P90 dos vermelhos 19,0 → 17,2
-min, com 3 movimentos aceitos (Paciência e Vila Kennedy → UPA Jacarepaguá; Evandro Freire → Lourenço
-Jorge) e 6 rejeitados. A Barra continua a zona pior servida (4 bases para 460 mil hab.) — o próximo
-ganho é uma base nova, não realocação.
+UPA Jacarepaguá (cobre 607 mil hab. num raio de 5 km)"* — aplica o movimento, mede, e mantém se J
+caiu pelo menos 2 %. Se não caiu, desfaz. É hill-climbing com memória do que já tentou.
+
+Em 10 turnos com a frota real de 73: J 80,9 → 72,6, uma queda de 10 %. O P90 global foi de 16,4 para
+14,2 min e o dos vermelhos de 19,0 para 17,2. Dos 9 movimentos propostos, 3 foram aceitos (Paciência
+e Vila Kennedy para a UPA Jacarepaguá, Evandro Freire para o Lourenço Jorge) e 6 rejeitados. A Barra
+continua sendo a zona pior servida, com 4 bases para 460 mil habitantes, e isso é o que me fez
+concluir que o próximo ganho vem de uma base nova, não de realocação.
 
 A alocação vencedora fica em `dados/alocacao.json` e o bootstrap a usa na AWS; o console mostra a
 trajetória (`GET /turnos`).
 
-**Isto é aprendizado de máquina?** Não, e o README diz isso de propósito: é *otimização guiada por
-dados* — cada decisão tem uma justificativa que dá para narrar e auditar. Onde ML entraria de verdade:
-(1) previsão de demanda por zona × hora sobre o event log, para reposicionar ambulâncias livres ao
-longo do dia (com dados sintéticos o modelo só aprenderia a curva que eu mesmo escrevi; o valor é o
-pipeline, que com a série real do SAMU-RJ aprenderia padrões reais); (2) triagem automática a partir
-da ligação — exige dados reais de chamadas. Aprender a política de despacho com RL seria a versão
-vistosa e a que eu não faria: caro de treinar num simulador em tempo real acelerado e impossível de
-defender em 35 minutos.
+Isto não é aprendizado de máquina, e eu faço questão de escrever isso. É otimização guiada por dados:
+cada decisão tem uma justificativa que dá para narrar e auditar.
+
+Onde ML entraria de verdade são dois lugares. Previsão de demanda por zona e hora sobre o event log,
+para reposicionar ambulâncias livres ao longo do dia. Só que com dados sintéticos o modelo
+aprenderia a curva que eu mesmo escrevi, então o que vale aqui é o pipeline, não o modelo; com a
+série real do SAMU-RJ ele aprenderia padrão real. E triagem automática a partir da ligação, que exige
+dados reais de chamadas.
+
+Aprender a política de despacho com aprendizado por reforço seria a versão vistosa, e é a que eu não
+faria: caro de treinar num simulador em tempo real acelerado, e o resultado seria uma política que eu
+não consigo explicar para quem decide o orçamento.
 
 ## Onde abrir a próxima base (D9 — experimento D)
 
@@ -153,15 +163,23 @@ Método, em dois estágios pra caber em 30 min de máquina:
 | base nova em Pedra de Guaratiba | 13,5 | 19,3 | −0,6 [−1,2, −0,2] | −0,6 (Oeste −1,1, Barra 0) |
 | base nova em Vargem Grande | 13,6 | 17,4 | −0,6 [−1,0, −0,2] | −0,5 [−0,7, −0,3] |
 
-Leitura:
+A leitura que eu faço:
 
-- **Reforçar uma base existente não muda nada** (−0,1 min, IC contém zero). O sistema já está na
-  faixa estável (experimento B): ambulância extra onde já há cobertura vira ociosidade.
-- **Uma base nova nas Vargens/Recreio reduz o P90 da cidade em ~0,9 min e o da Barra em ~2 min**
-  (19,2 → 17,3), com IC que exclui zero mesmo com 5 seeds — porque a comparação é pareada por seed.
-- Pedra de Guaratiba ajuda a Zona Oeste (−1,1) e não a Barra: candidatas diferentes atacam zonas
-  diferentes; a escolha depende de qual zona a Secretaria quer priorizar.
-- Nenhuma delas leva a Barra à meta de 15 min: é o mesmo veredito do D8 — **mais via do que frota**.
+Reforçar uma base existente não muda nada. São −0,1 min e o intervalo contém zero. Faz sentido com o
+experimento B: o sistema já está na faixa estável, e ambulância extra onde já há cobertura vira
+ociosidade.
+
+Uma base nova nas Vargens ou no Recreio reduz o P90 da cidade em uns 0,9 min e o da Barra em uns
+2 min, de 19,2 para 17,3. O intervalo exclui zero mesmo com apenas 5 seeds, e isso só é possível
+porque a comparação é pareada por seed. Vale dizer que Vargem Pequena e Recreio empatam: os
+intervalos se sobrepõem quase inteiros, então o que dá para afirmar é que as duas batem o controle,
+não que uma bate a outra.
+
+Pedra de Guaratiba é um caso diferente — ajuda a Zona Oeste (−1,1) e não ajuda a Barra. Candidatas
+diferentes atacam zonas diferentes, e aí a escolha deixa de ser técnica: depende de qual zona a
+Secretaria quer priorizar.
+
+Nenhuma delas leva a Barra à meta de 15 min, que é o mesmo veredito do D8.
 
 Reproduzir: `python scripts/experimento_d.py` (≈ 28 min; `--rapido` em 5 min) → `docs/experimentos/expansao.json`,
 `python scripts/graficos.py`. O console mostra as finalistas na seção "Onde abrir a próxima base" e
@@ -169,15 +187,15 @@ as candidatas no mapa.
 
 ## Cenários com intervalo de confiança (D9)
 
-Até o D8 cada comparação era "média de 3 seeds". Um gestor precisa de *"abrir uma base no Recreio
-reduz o P90 em 2,0 ± 0,3 min"* — senão não dá pra distinguir efeito de ruído. O D9 transforma
-isso em instrumento:
+Até o D8 cada comparação era uma média de 3 seeds, e isso não serve: não dá para distinguir efeito de
+ruído. Quem decide o orçamento precisa ouvir "abrir uma base no Recreio reduz o P90 em 2,0 ± 0,3 min".
 
-- `samu_sim/estatistica.py` — IC 95 % por **bootstrap** (Python puro, determinístico) e
-  **diferença pareada por seed**: os dois cenários rodam com as *mesmas* seeds (common random
-  numbers), então a variância do gerador de chamados cancela e o IC da diferença fica muito mais
-  estreito do que comparar duas médias independentes. "Significativo" = IC da diferença não contém 0
-  (exige ≥ 3 seeds).
+`samu_sim/estatistica.py` faz o IC de 95 % por bootstrap, em Python puro e determinístico, e a
+diferença pareada por seed. O pareamento é o que resolve o problema: os dois cenários rodam com as
+mesmas seeds, então o mesmo dia de chamados acontece nos dois mundos, a variância do gerador cancela,
+e o intervalo da diferença fica muito mais estreito do que comparar duas médias independentes. É
+common random numbers. Só chamo de significativo quando o intervalo não contém zero, e com pelo menos
+3 seeds.
 - `samu_sim/cenarios.py` — um `Cenario` descreve frota, política, alocação por base, bases extras,
   trânsito e reposicionamento; `executar` roda N seeds e resume com IC; `comparar` faz a diferença
   pareada por métrica (P90, P50, P90 vermelhos, pendentes, P90 por zona).
@@ -192,18 +210,18 @@ isso em instrumento:
 
 ## Caos e invariantes (D11): o sistema se mantém correto quando tudo dá errado?
 
-O objetivo do projeto é o sistema distribuído, então o "resultado" que mais importa não é o P90:
-é **provar que nenhuma falha deixa o estado errado**.
+O objetivo do projeto é o sistema distribuído, então o resultado que mais importa para mim não é o
+P90: é conseguir mostrar que nenhuma falha deixa o estado errado.
 
-- **Fila caótica** (`samu_sim/infra/fila_caotica.py`): mesma interface da `Fila`, e injeta com
-  seed as falhas que o SQS e os processos permitem: mensagem duplicada, atrasada, fora de ordem,
+- A fila caótica (`samu_sim/infra/fila_caotica.py`) tem a mesma interface da `Fila` e injeta, com
+  seed, as falhas que o SQS e os processos permitem: mensagem duplicada, atrasada, fora de ordem,
   ack perdido (consumidor morreu depois de processar) e processo que morre ao publicar.
-- **Workers que caem e congelam**: `derrubar()`/`reviver()` simula o `docker restart` (a memória
-  dos ciclos se perde); `pausar()`/`retomar()` simula uma pausa de GC ou VM travada (a memória
-  fica, e o ciclo antigo tenta continuar).
-- **Verificador de invariantes** (`samu_sim/invariantes.py`), só com checagens exatas. A ordem
-  entre logs de processos diferentes é ambígua, então a sequência de cada ambulância é ordenada
-  pela **versão do registro**, que o lock otimista incrementa:
+- `derrubar()` e `reviver()` simulam o `docker restart`, em que a memória dos ciclos se perde.
+  `pausar()` e `retomar()` simulam uma pausa de GC ou uma VM travada: a memória fica, e o ciclo
+  antigo tenta continuar de onde parou.
+- O verificador (`samu_sim/invariantes.py`) só faz checagem exata. A ordem entre logs de processos
+  diferentes é ambígua, então a sequência de cada ambulância é ordenada pela versão do registro, que
+  o lock otimista incrementa:
 
 | | invariante |
 |---|---|
@@ -214,9 +232,9 @@ O objetivo do projeto é o sistema distribuído, então o "resultado" que mais i
 | I5 | cada chamado recebe uma ambulância, mais uma por vez que o reaper o devolveu |
 
 `python scripts/caos.py --rodadas 20` roda o sistema inteiro sob caos (12 h simuladas por rodada),
-desliga as falhas, espera drenar e julga. **Antes das correções abaixo: 1 de 4 rodadas limpa.
-Depois: 20 de 20**, com centenas de duplicatas, atrasos, acks perdidos, processos mortos ao
-publicar e quedas de worker por rodada.
+desliga as falhas, espera drenar e julga. Antes das correções abaixo eu tinha 1 rodada limpa em 4.
+Depois, 20 em 20 — com centenas de duplicatas, atrasos, acks perdidos, processos mortos ao publicar
+e quedas de worker em cada rodada.
 
 O que o caos achou (e que nenhum teste unitário tinha pegado):
 
@@ -272,18 +290,23 @@ teto dos cenários (`CENARIOS_FATOR_MAX`: 2000 local, 500 na AWS) e recusa com 4
 
 ## O que eu faria diferente / próximos passos
 
-- **Relógio lógico** (ticks) em vez de tempo real acelerado: reprodutibilidade exata e rodadas
-  em segundos; custa uma barreira de sincronização entre serviços.
-- **Fargate + ALB** no lugar da EC2 única; métricas e eventos do console por WebSocket, como o
-  estado já é (hoje `/metricas` e `/eventos` são polling).
-- **Trânsito real** (COR/Waze por corredor e hora) no lugar do perfil estimado — é a variável que
-  mais muda a conclusão, e a menos calibrada.
-- **Reposicionamento com objetivo explícito** (cobertura garantida por zona, não pressão relativa) —
-  a versão atual é neutra; agora dá pra avaliar a próxima com `scripts/cenarios.py` antes de ajustar.
-- **Preempção**: desviar uma ambulância a caminho de um verde para um vermelho a 2 min — cancelar um
-  ciclo em voo em outro processo é o melhor problema distribuído que sobrou.
-- **Replay** do event log (reconstruir o estado em qualquer instante) e **frota heterogênea**
-  (USA/USB/motolância, troca de plantão) — os dois mudam o que a política pode decidir.
+A coisa que mais me incomoda é o relógio. Trocaria tempo real acelerado por relógio lógico, em ticks:
+daria reprodutibilidade exata e rodadas em segundos, ao custo de uma barreira de sincronização entre
+os serviços.
+
+Trânsito real (COR ou Waze, por corredor e hora) no lugar do perfil estimado. É a variável que mais
+muda a conclusão do projeto e a menos calibrada, o que é uma combinação ruim.
+
+O problema técnico que eu mais quero atacar é preempção: desviar uma ambulância que está a caminho de
+um verde para um vermelho a 2 min. Cancelar um ciclo em voo em outro processo é o melhor problema
+distribuído que sobrou, e é o que quebra o meu modelo de condição por item — precisaria de transação.
+
+Também na lista: Fargate e ALB no lugar da EC2 única, e WebSocket para métricas e eventos no console
+(hoje `/metricas` e `/eventos` são polling, embora o estado já venha por WebSocket). Reposicionamento
+com objetivo explícito — cobertura garantida por zona em vez de pressão relativa —, que agora dá para
+avaliar com `scripts/cenarios.py` antes de mexer. Replay do event log, para reconstruir o estado em
+qualquer instante. E frota heterogênea, com USA, USB, motolância e troca de plantão, que muda o que a
+política pode decidir.
 
 ---
 
