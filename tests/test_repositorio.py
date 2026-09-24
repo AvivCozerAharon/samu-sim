@@ -140,3 +140,29 @@ def test_atualizar_posicao_so_se_disponivel():
     r.reservar_ambulancia("amb-1", 0, "ch-1")
     assert r.atualizar_posicao_se_disponivel("amb-1", -3.0, -4.0) is False
     assert r.obter_ambulancia("amb-1").lat == -1.0
+
+
+# ---------- escrita condicional do chamado ----------
+def test_salvar_chamado_se_recusa_quando_o_estado_mudou():
+    from samu_sim.core.modelos import StatusChamado as SC
+    r = RepositorioMemoria()
+    r.salvar_chamado(Chamado(id="ch-1", lat=0, lon=0, bairro="X", zona="Sul", criado_em=0,
+                             status=SC.DESPACHADO, ambulancia_id="amb-2"))
+    velho = r.obter_chamado("ch-1")
+    velho.chegada_em = 99.0
+    with pytest.raises(ConflitoVersao):
+        r.salvar_chamado_se(velho, SC.DESPACHADO, "amb-1")  # ja nao e da amb-1
+    assert r.obter_chamado("ch-1").chegada_em is None
+    r.salvar_chamado_se(velho, SC.DESPACHADO, "amb-2")
+    assert r.obter_chamado("ch-1").chegada_em == 99.0
+
+
+def test_salvar_chamado_se_preserva_publicado():
+    from samu_sim.core.modelos import StatusChamado as SC
+    r = RepositorioMemoria()
+    r.salvar_chamado(Chamado(id="ch-1", lat=0, lon=0, bairro="X", zona="Sul", criado_em=0))
+    r.marcar_publicado("ch-1")
+    c = r.obter_chamado("ch-1")
+    c.publicado = False
+    r.salvar_chamado_se(c, SC.PENDENTE, None)
+    assert r.obter_chamado("ch-1").publicado is True

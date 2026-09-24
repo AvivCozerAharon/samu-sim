@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from samu_sim.gerador.demanda import GeradorChamados, carregar_bairros  # noqa: E402
+from samu_sim.gerador.demanda import CHAMADOS_POR_DIA_RIO, GeradorChamados, carregar_bairros  # noqa: E402
 from samu_sim.previsao import ModeloDemanda  # noqa: E402
 from scripts.analisar_rodada import carregar_eventos  # noqa: E402
 
@@ -16,7 +16,7 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--logs", nargs="*", default=[], help="pastas com JSONL de rodadas")
     p.add_argument("--dias", type=int, default=0, help="alternativa: gerar N dias sinteticos")
-    p.add_argument("--chamados-por-dia", type=int, default=600)
+    p.add_argument("--chamados-por-dia", type=int, default=CHAMADOS_POR_DIA_RIO)
     p.add_argument("--seed", type=int, default=99)
     p.add_argument("--saida", default="dados/demanda_prevista.json")
     a = p.parse_args()

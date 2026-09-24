@@ -13,7 +13,8 @@ from botocore.exceptions import ClientError
 
 from samu_sim.core import modelos
 from samu_sim.core.config import Config
-from samu_sim.core.modelos import Ambulancia, Chamado, Rodada, StatusAmbulancia, transicao_valida
+from samu_sim.core.modelos import (Ambulancia, Chamado, Rodada, StatusAmbulancia, StatusChamado,
+                                   transicao_valida)
 from samu_sim.infra.fila import Mensagem
 from samu_sim.infra.repositorio import ConflitoVersao
 
@@ -97,6 +98,15 @@ class FilaSQS:
             if e.response["Error"]["Code"] not in ("ReceiptHandleIsInvalid", "InvalidParameterValue"):
                 raise
 
+    def adiar(self, msg: Mensagem, seg: float) -> None:
+        try:
+            self._sqs.change_message_visibility(QueueUrl=self._url, ReceiptHandle=msg.handle,
+                                                VisibilityTimeout=max(0, int(round(seg))))
+        except ClientError as e:
+            if e.response["Error"]["Code"] not in ("ReceiptHandleIsInvalid", "InvalidParameterValue",
+                                                   "MessageNotInflight"):
+                raise
+
     def tamanho(self) -> int:
         attrs = self._sqs.get_queue_attributes(
             QueueUrl=self._url,
@@ -159,10 +169,25 @@ class RepositorioDynamo:
             id, campos | {"status": str(para)},
             cond="#status = :de AND versao = :v", valores={":de": str(de), ":v": versao}, versao=versao)
 
-    def liberar_ambulancia(self, id: str, versao: int, lat: float, lon: float) -> Ambulancia:
+    def liberar_ambulancia(self, id: str, versao: int, lat: float, lon: float,
+                           worker_id: str | None = None) -> Ambulancia:
+        campos = {"status": str(StatusAmbulancia.DISPONIVEL), "chamado_id": None, "lat": lat, "lon": lon}
+        if worker_id:
+            campos["worker_id"] = worker_id
+        return self._update_condicional(id, campos, cond="versao = :v", valores={":v": versao}, versao=versao)
+
+    def reatribuir_worker(self, id: str, versao: int, worker_id: str) -> Ambulancia:
         return self._update_condicional(
-            id, {"status": str(StatusAmbulancia.DISPONIVEL), "chamado_id": None, "lat": lat, "lon": lon},
-            cond="versao = :v", valores={":v": versao}, versao=versao)
+            id, {"worker_id": worker_id}, cond="#status = :d AND versao = :v",
+            valores={":d": str(StatusAmbulancia.DISPONIVEL), ":v": versao}, versao=versao)
+
+    # workers vivos: um item por worker na tabela da rodada (id "worker#w0"), com o heartbeat
+    def registrar_worker(self, worker_id: str, ts: float) -> None:
+        self._rod.put_item(Item={"id": f"worker#{worker_id}", "heartbeat_em": Decimal(repr(ts))})
+
+    def listar_workers(self) -> dict[str, float]:
+        itens = _scan_tudo(self._rod, ConsistentRead=True, FilterExpression=Attr("id").begins_with("worker#"))
+        return {i["id"].split("#", 1)[1]: float(i["heartbeat_em"]) for i in itens}
 
     def _update_condicional(self, id: str, campos: dict, cond: str, valores: dict, versao: int) -> Ambulancia:
         nomes = {"#status": "status"}
@@ -204,6 +229,50 @@ class RepositorioDynamo:
     # --- chamados ---
     def salvar_chamado(self, c: Chamado) -> None:
         self._ch.put_item(Item=para_item(c))
+
+    def criar_chamado(self, c: Chamado) -> bool:
+        try:
+            self._ch.put_item(Item=para_item(c), ConditionExpression="attribute_not_exists(id)")
+            return True
+        except ClientError as e:
+            if _conflito(e):
+                return False
+            raise
+
+    def salvar_chamado_se(self, c: Chamado, status: StatusChamado, ambulancia_id: str | None,
+                          publicado: bool | None = None) -> None:
+        item = para_item(c)
+        item.pop("publicado", None)  # por padrao nao mexe no outbox
+        if publicado is not None:
+            item["publicado"] = publicado
+        nomes = {"#status": "status"}
+        vals = {":s": str(status)}
+        if ambulancia_id is None:
+            cond_amb = "(attribute_not_exists(ambulancia_id) OR attribute_type(ambulancia_id, :tnull))"
+            vals[":tnull"] = "NULL"
+        else:
+            cond_amb = "ambulancia_id = :a"
+            vals[":a"] = ambulancia_id
+        sets, i = [], 0
+        for k, v in item.items():
+            if k == "id":
+                continue
+            i += 1
+            nomes[f"#c{i}"] = k
+            vals[f":c{i}"] = v
+            sets.append(f"#c{i} = :c{i}")
+        try:
+            self._ch.update_item(Key={"id": c.id}, UpdateExpression="SET " + ", ".join(sets),
+                                 ConditionExpression=f"#status = :s AND {cond_amb}",
+                                 ExpressionAttributeNames=nomes, ExpressionAttributeValues=vals)
+        except ClientError as e:
+            if _conflito(e):
+                raise ConflitoVersao(f"{c.id}: esperado ({status}, {ambulancia_id})") from None
+            raise
+
+    def marcar_publicado(self, id: str) -> None:
+        self._ch.update_item(Key={"id": id}, UpdateExpression="SET publicado = :t",
+                             ExpressionAttributeValues={":t": True})
 
     def obter_chamado(self, id: str) -> Chamado | None:
         item = self._ch.get_item(Key={"id": id}, ConsistentRead=True).get("Item")

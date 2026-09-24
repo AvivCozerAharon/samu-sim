@@ -9,7 +9,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-ZONAS = ["Centro", "Sul", "Norte", "Barra", "Oeste"]
+from samu_sim.core.modelos import ROTULO_ZONA, ZONAS  # noqa: E402
+
 CORES = {"mais_proxima": "#8A9BAE", "menor_eta": "#4FC3F7", "menor_eta_cobertura": "#3DDC97"}
 ROTULOS = {"mais_proxima": "mais próxima (linha reta)", "menor_eta": "menor ETA (malha viária)",
            "menor_eta_cobertura": "menor ETA + cobertura"}
@@ -39,7 +40,7 @@ def grafico_a(res: dict, saida: Path) -> None:
                error_kw={"ecolor": "#E8EEF4", "elinewidth": .8})
     ax.axhline(META_MIN, color="#FFC857", lw=1.2, ls="--")
     ax.text(len(ZONAS) - 0.55, META_MIN + 0.6, "meta 15 min", color="#FFC857", ha="right", fontsize=9)
-    ax.set_xticks(range(len(ZONAS)), ZONAS)
+    ax.set_xticks(range(len(ZONAS)), [ROTULO_ZONA[z].replace(' (', '\n(') for z in ZONAS])
     ax.set_ylabel("P90 do tempo de resposta (min)")
     c = res["config"]
     ax.set_title(f"A · política de despacho × zona — {c.get('frota_a', 50)} ambulâncias (frota real), {c['chamados_por_dia']} chamados/dia, "

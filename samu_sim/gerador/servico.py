@@ -22,10 +22,16 @@ class ServicoGerador:
         self._log = eventlog
 
     def executar(self, parar: threading.Event) -> int:
-        # chamados ja no passado (gerador subiu atrasado ou foi reiniciado no meio da
-        # rodada) sao descartados: publica-los inflaria a espera com atraso ficticio
         agora = self._relogio.agora_sim()
-        pendentes = [c for c in self._chamados if c.criado_em >= agora - TOLERANCIA_ATRASO_SIM]
+        retomando = bool(self._chamados) and self._repo.obter_chamado(self._chamados[0].id) is not None
+        if retomando:
+            # reinicio no meio da rodada: os chamados atrasados aconteceram de verdade e tem que
+            # entrar (atrasados); os que ja existem sao pulados pelo criar_chamado
+            pendentes = list(self._chamados)
+        else:
+            # primeira subida atrasada (ex.: build da imagem na EC2): o que ja passou nao e
+            # publicado, senao a espera sairia inflada com um atraso que nao existiu
+            pendentes = [c for c in self._chamados if c.criado_em >= agora - TOLERANCIA_ATRASO_SIM]
         pulados = len(self._chamados) - len(pendentes)
         if pulados:
             self._log.registrar("chamados_pulados", quantidade=pulados, agora_sim=agora)
@@ -36,11 +42,13 @@ class ServicoGerador:
                 self._relogio.dormir_sim(min(resta_sim, ESPERA_MAX_REAL * self._relogio.fator))
             if parar.is_set():
                 break
-            self._repo.salvar_chamado(c)
+            if not self._repo.criar_chamado(c):
+                continue  # ja existia: este gerador reiniciou; nunca sobrescreve um chamado em andamento
             self._filas[c.prioridade].publicar({
                 "chamado_id": c.id, "lat": c.lat, "lon": c.lon, "prioridade": c.prioridade,
                 "bairro": c.bairro, "zona": c.zona, "criado_em": c.criado_em,
             })
+            self._repo.marcar_publicado(c.id)  # outbox: se morrer antes daqui, o reaper republica
             self._log.registrar("chamado_criado", chamado_id=c.id, bairro=c.bairro, zona=c.zona,
                                 prioridade=c.prioridade, tipo_chamado=c.tipo)
             publicados += 1

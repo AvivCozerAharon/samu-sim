@@ -160,3 +160,10 @@ def test_cenarios_fluxo():
     assert cli.get("/cenarios/nao-existe").status_code == 404
     assert cli.post("/cenarios", json={"cenario": {"nome": "y", "campo_invalido": 1}}).status_code == 202
     g.encerrar()
+
+
+def test_controle_recusa_fator_acima_do_teto():
+    c, repo, relogio, t = montar()
+    r = c.post("/controle", json={"fator": 5000})
+    assert r.status_code == 422 and "teto" in r.json()["detail"]
+    assert c.post("/controle", json={"fator": 50}).status_code == 200

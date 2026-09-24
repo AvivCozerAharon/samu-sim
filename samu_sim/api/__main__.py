@@ -22,7 +22,8 @@ def main() -> None:
     app = criar_app(infra.repo, infra.fila_chamados, infra.bases, relogio, log,
                     reaper_timeout_seg=cfg.reaper_timeout_seg, log_dir=cfg.log_dir,
                     rodada_id=cfg.rodada_id, turnos_path="docs/experimentos/turnos.json",
-                    gerenciador_cenarios=criar_gerenciador(cfg.cenarios_fator_max), expansao_path="docs/experimentos/expansao.json")
+                    gerenciador_cenarios=criar_gerenciador(cfg.cenarios_fator_max), expansao_path="docs/experimentos/expansao.json",
+                    fator_max=cfg.cenarios_fator_max, transito=cfg.transito)
 
     def loop_reaper():
         while not parar.wait(cfg.reaper_intervalo_seg):

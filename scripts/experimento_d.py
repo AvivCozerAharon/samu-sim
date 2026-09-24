@@ -15,12 +15,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from samu_sim import local as runner  # noqa: E402
 from samu_sim.cenarios import Cenario, comparar  # noqa: E402
+from samu_sim.core.modelos import ZONAS  # noqa: E402
 from samu_sim.cenarios import executar as executar_cenario  # noqa: E402
 from samu_sim.expansao import candidatas, cenario_candidata  # noqa: E402
 from samu_sim.gerador.demanda import carregar_bairros, carregar_bases  # noqa: E402
 from samu_sim.otimizador import demanda_coberta  # noqa: E402
 
-ZONAS = ("Centro", "Sul", "Norte", "Barra", "Oeste")
 SEEDS = [42, 7, 2024, 11, 99, 5, 23, 77, 31, 8]
 
 
@@ -82,7 +82,7 @@ def main() -> None:
     p.add_argument("--rapido", action="store_true", help="triagem 6 h, final 2 seeds x 12 h")
     p.add_argument("--extra", type=int, default=2, help="ambulancias na base nova")
     p.add_argument("--seeds-final", type=int, default=None)
-    p.add_argument("--fator", type=float, default=2000)
+    p.add_argument("--fator", type=float, default=500)  # acima disso o simulador atrasa o relogio (README)
     p.add_argument("--transito", action="store_true")
     p.add_argument("--reposicionamento", action="store_true")
     p.add_argument("--alocacao", default="dados/alocacao.json")
