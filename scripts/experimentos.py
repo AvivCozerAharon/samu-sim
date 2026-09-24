@@ -10,9 +10,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from samu_sim import local as runner  # noqa: E402
 from samu_sim.core.config import Config  # noqa: E402
+from samu_sim.core.modelos import ZONAS  # noqa: E402
+from samu_sim.gerador.demanda import CHAMADOS_POR_DIA_RIO  # noqa: E402
 
 SEEDS = [42, 7, 2024]
-ZONAS = ["Centro", "Sul", "Norte", "Barra", "Oeste"]
 POLITICAS = ["mais_proxima", "menor_eta", "menor_eta_cobertura"]
 FROTAS = [20, 30, 40, 50, 65, 80]
 FROTA_A = 73  # frota real do SAMU-RJ (2024): 73 ambulancias
@@ -52,8 +53,8 @@ def resumo(rodadas: list[dict]) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--rapido", action="store_true", help="1 seed, 12 h")
-    p.add_argument("--fator", type=float, default=2000)
-    p.add_argument("--chamados-por-dia", type=int, default=600)
+    p.add_argument("--fator", type=float, default=500)  # acima disso o simulador atrasa o relogio (README)
+    p.add_argument("--chamados-por-dia", type=int, default=CHAMADOS_POR_DIA_RIO)
     p.add_argument("--saida", default="docs/experimentos/resultados.json")
     p.add_argument("--apenas", choices=["A", "B", "E"], default=None, help="roda so um experimento e preserva os outros no JSON")
     p.add_argument("--realismo", action="store_true", help="B com reposicionamento e transito ligados")

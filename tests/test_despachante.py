@@ -146,3 +146,41 @@ def test_vermelho_publicado_depois_e_despachado_antes_dos_verdes():
     assert all(repo.obter_chamado(f"verde-{i}").ambulancia_id is None for i in range(3))
     assert d.processar_lote() == 0  # sem ambulancia: verdes ficam na fila (sem ack)
     assert filas["verde"].tamanho() == 3
+
+
+# ---------- corrida com mensagem duplicada e inversao de prioridade ----------
+def test_mensagem_duplicada_em_corrida_desfaz_a_segunda_reserva():
+    relogio, repo, fila, filas_ev, log, d = montar()
+    publicar_chamado(fila, repo)
+    velho = repo.obter_chamado("ch-1")  # o que o 2o despachante leu, ainda PENDENTE
+    c = repo.obter_chamado("ch-1")      # enquanto isso o 1o despachou para a amb-9
+    c.status, c.ambulancia_id = SC.DESPACHADO, "amb-9"
+    repo.salvar_chamado(c)
+    repo.obter_chamado = lambda _id: velho
+    assert d.processar_lote() == 1
+    assert repo.obter_ambulancia("amb-0").status == SA.DISPONIVEL  # reserva desfeita
+    assert log.contar("despacho_duplicado_evitado") == 1
+    assert filas_ev["w0"].tamanho() == 0 and filas_ev["w1"].tamanho() == 0
+    assert fila.tamanho() == 0  # deu ack
+
+
+def test_sem_ambulancia_para_vermelho_segura_os_verdes_e_volta_rapido():
+    import time
+    from samu_sim.core.modelos import PRIORIDADES
+    relogio = Relogio(fator=1)
+    repo = RepositorioMemoria()
+    filas = {p: FilaMemoria(visibilidade_seg=30) for p in PRIORIDADES}
+    filas_ev = {"w0": FilaMemoria()}
+    log = EventLogMemoria(relogio, "despachante")
+    d = Despachante(filas, filas_ev, repo, MaisProxima(), RoteadorHaversine(), relogio, log,
+                    cache_seg=0, reentrega_seg=0.1)
+    for id_, pri in (("verde-0", "verde"), ("vermelho-0", "vermelho")):
+        repo.salvar_chamado(Chamado(id=id_, lat=-22.9, lon=-43.2, bairro="B", zona="Sul", criado_em=0, prioridade=pri))
+        filas[pri].publicar({"chamado_id": id_, "prioridade": pri})
+    assert d.processar_lote() == 0  # vermelho sem ambulancia
+    repo.salvar_ambulancia(Ambulancia(id="amb-0", base_id="b", lat=-22.90, lon=-43.20, worker_id="w0"))
+    assert d.processar_lote() == 0  # a ambulancia livrou, mas o verde nao passa na frente
+    assert repo.obter_chamado("verde-0").ambulancia_id is None
+    time.sleep(0.12)                 # o vermelho volta em reentrega_seg, nao em 30 s
+    assert d.processar_lote() == 1
+    assert repo.obter_chamado("vermelho-0").ambulancia_id == "amb-0"

@@ -9,6 +9,11 @@ from samu_sim.core.modelos import Base, Chamado
 
 SEGUNDOS_DIA = 86400
 
+# Volume real de emergencia do SAMU-RJ (capital): 216 mil atendimentos em 2024, dos quais ~34-40 mil
+# sao transferencias entre hospitais, feitas por outra frota (44 ambulancias de transporte). Sem elas,
+# ~176-182 mil/ano = ~490/dia para as 73 ambulancias de emergencia. Fontes em docs/calibracao.md.
+CHAMADOS_POR_DIA_RIO = 490
+
 # Peso relativo de cada hora do dia. Calibrado pela literatura de SAMU (analise de configuracao
 # do SAMU de Ribeirao Preto, SciELO): dois picos, por volta de 12 h e de 20 h, e vale de madrugada.
 PESOS_HORA: list[float] = [

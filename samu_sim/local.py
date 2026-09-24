@@ -85,7 +85,8 @@ def rodar(fator: float, duracao_sim_seg: float, n_ambulancias: int = 50,
     chamados = [c for c in chamados if c.criado_em < duracao_sim_seg]
     gerador = ServicoGerador(chamados, fila_chamados, repo, relogio, novo_log("gerador"))
     despachantes = [Despachante(fila_chamados, filas_eventos, repo, criar_politica(politica), rot,
-                                relogio, novo_log(f"despachante-{i}")) for i in range(n_despachantes)]
+                                relogio, novo_log(f"despachante-{i}"),
+                                reentrega_seg=min(visibilidade_seg, 2.0)) for i in range(n_despachantes)]
     reposicionador = None
     if reposicionamento:
         caminho = Path((cfg or Config()).demanda_path)
