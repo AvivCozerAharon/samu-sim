@@ -1,16 +1,24 @@
 # samu-sim
 
-Simulador **distribuído** de despacho de ambulâncias no Rio de Janeiro, construído como
-ferramenta de apoio à decisão: *qual política de despacho reduz o tempo de resposta na Zona
-Oeste?*, *a partir de quantas ambulâncias o ganho é marginal?* e *onde abrir a próxima base?* —
-cada resposta com intervalo de confiança.
+Simulador distribuído de despacho de ambulâncias no Rio de Janeiro.
 
-Chamados sintéticos (proporcionais à população por bairro, com picos por volta de 12 h e 20 h) entram
-numa fila **SQS**; N **despachantes** concorrentes escolhem a ambulância por uma política plugável e
-disputam a reserva com **lock otimista** no **DynamoDB**; **workers** simulam o deslocamento pela
-malha viária real (OSRM) em tempo acelerado; um **reaper** recupera ambulâncias de workers mortos;
-uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memória (1 processo), em
-`docker compose` com LocalStack, e numa EC2 com SQS/DynamoDB/S3 reais via Terraform.
+Eu queria estudar sistemas distribuídos e AWS num problema que não fosse mais um CRUD. Despacho de
+ambulância serve bem: a ambulância só pode estar num lugar, vários despachantes competem pela mesma,
+e o processo que está cuidando dela pode morrer no meio do atendimento. Só que não dá para testar
+política de despacho na rua, porque o paciente está dentro. Então simulei a cidade.
+
+Acabou virando uma ferramenta de decisão. São três perguntas, cada uma respondida com intervalo de
+confiança: qual política de despacho reduz o tempo de resposta na Zona Oeste, a partir de quantas
+ambulâncias o ganho fica marginal, e onde abrir a próxima base.
+
+Como funciona. Chamados sintéticos — proporcionais à população de cada bairro, com picos por volta de
+meio-dia e das 20 h — entram numa fila SQS. N despachantes concorrentes escolhem a ambulância por uma
+política plugável e disputam a reserva com lock otimista no DynamoDB. Workers simulam o deslocamento
+pela malha viária real (OSRM) em tempo acelerado. Um reaper recupera as ambulâncias de workers que
+morreram. Uma API expõe as métricas e um console ao vivo.
+
+O mesmo código roda de três jeitos: tudo em memória num processo só, em `docker compose` com
+LocalStack, e numa EC2 com SQS, DynamoDB e S3 reais subidos por Terraform.
 
 ## Resultados
 
@@ -40,19 +48,21 @@ uma **API** expõe métricas e um console ao vivo. Mesmo código roda em memóri
 
 *(sem trânsito, D6: 65 → 17,9 min e 80 → 15,0 min; o trânsito de pico custa ~5 min de P90 em qualquer frota)*
 
-**Os insights:**
+O que eu tirei disso:
 
-- **A frota real está no lugar certo — e a meta de 15 min não é atingível com ela.** Com o ciclo
-  completo (deslocamento + 20–30 min no local + transporte ao hospital + entrega) e trânsito de pico,
-  50 ambulâncias colapsam ao longo do dia e o joelho fica em ~65; o SAMU-RJ opera 73 — dentro da
-  faixa estável, com P90 ≈ 21 min. Nem 80 ambulâncias batem 15 min no P90 com trânsito; sem trânsito,
-  80 batem. Ou seja: o problema do P90 no Rio é mais via do que frota.
-- **A política paga na Zona Oeste.** Despachar pela linha reta custa 4 min de P90 lá (16 → 12 com a
-  malha viária), porque o Maciço da Pedra Branca e a baía de Sepetiba tornam a "mais próxima" enganosa;
-  no resto da cidade a diferença some.
-- **"Não esvaziar a base" piorou.** A política com penalidade de cobertura manda uma ambulância mais
-  longe para preservar a base — e o custo de resposta supera o ganho de cobertura. Um resultado negativo
-  útil: a intuição estava errada, e só a medição mostrou.
+A frota real está dimensionada corretamente, e ainda assim a meta de 15 min não é alcançável com ela.
+Com o ciclo completo (deslocamento, 20 a 30 min no local, transporte ao hospital, entrega) e trânsito
+de pico, 50 ambulâncias colapsam ao longo do dia e o joelho da curva fica em torno de 65. O SAMU-RJ
+opera 73, dentro da faixa estável, com P90 de uns 21 min. Nem 80 ambulâncias batem os 15 min com
+trânsito ligado; sem trânsito, batem. O problema do P90 no Rio é mais via do que frota.
+
+A política de despacho só faz diferença na Zona Oeste. Despachar pela linha reta custa 4 min de P90
+lá (16 → 12 quando passei a rotear pela malha viária), porque o Maciço da Pedra Branca e a baía de
+Sepetiba tornam a "ambulância mais próxima" enganosa. No resto da cidade a diferença some.
+
+O terceiro resultado é o que eu não esperava. A política de "não esvaziar a base" piorou: ela manda
+uma ambulância mais longe para preservar cobertura, e o custo de resposta supera o ganho. Eu estava
+convencido do contrário quando implementei, e só a medição mostrou.
 
 **Validação distribuída (D5, modelo anterior):** o mesmo cenário rodado na AWS — EC2 com 6
 containers, SQS e DynamoDB reais — contra o modelo em memória, 1 seed, 6 h simuladas, 50 ambulâncias
@@ -276,8 +286,6 @@ teto dos cenários (`CENARIOS_FATOR_MAX`: 2000 local, 500 na AWS) e recusa com 4
   (USA/USB/motolância, troca de plantão) — os dois mudam o que a política pode decidir.
 
 ---
-
-Spec: `docs/superpowers/specs/2026-09-18-samu-sim-design.md` · planos por dia em `docs/superpowers/plans/`.
 
 ## Rodar (D1 — tudo em memória)
 
